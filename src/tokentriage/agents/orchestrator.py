@@ -21,15 +21,14 @@ import time
 import uuid
 from dataclasses import dataclass, field
 
-from tokentriage import db
+from tokentriage import db, providers
 from tokentriage.agents.triage import TriageVerdict, triage
 from tokentriage.agents.verifier import should_sample, verify
 from tokentriage.cache.semantic_cache import SemanticCache
 from tokentriage.mcp_server import tools as mcp_tools
-from tokentriage.models.registry import TIERS, TIER_ORDER, estimate_cost_usd, next_tier_up
+from tokentriage.models.registry import (
+    TIERS, TIER_ORDER, estimate_baseline_usd, estimate_cost_usd, next_tier_up)
 from tokentriage.security import budget as breaker
-
-from google import genai
 
 
 @dataclass
@@ -111,14 +110,9 @@ def _pick_tier(policy: dict, verdict: TriageVerdict) -> tuple[str, str]:
 
 
 def _dispatch(tier: str, task: str) -> tuple[str, int, int]:
-    """Call the chosen model. Returns (answer, input_tokens, output_tokens)."""
-    t = TIERS[tier]
-    client = genai.Client(api_key=t.api_key)
-    resp = client.models.generate_content(model=t.model_id, contents=task)
-    um = getattr(resp, "usage_metadata", None)
-    itok = getattr(um, "prompt_token_count", None) or max(1, len(task) // 4)
-    otok = getattr(um, "candidates_token_count", None) or max(1, len(resp.text or "") // 4)
-    return resp.text or "", itok, otok
+    """Call the chosen model via the provider layer (Ollama/Gemini/OpenAI).
+    Returns (answer, input_tokens, output_tokens) with real backend counts."""
+    return providers.generate(TIERS[tier], task)
 
 
 def route(task: str, policy: dict, cache: SemanticCache) -> RouteResult:
@@ -131,7 +125,7 @@ def route(task: str, policy: dict, cache: SemanticCache) -> RouteResult:
         hit = cache.lookup(task)
         if hit is not None:
             trace.append(("CACHE_HIT", time.time()))
-            baseline = estimate_cost_usd("T3", len(task) // 4, len(hit) // 4)
+            baseline = estimate_baseline_usd(len(task) // 4, len(hit) // 4)
             r = RouteResult(task_id, hit, "T0", "cached", 0.0,
                             "semantic cache hit", 0.0, baseline,
                             cache_hit=True, trace=trace)
@@ -150,7 +144,7 @@ def route(task: str, policy: dict, cache: SemanticCache) -> RouteResult:
     answer, itok, otok = _dispatch(tier, task)
     cost = estimate_cost_usd(tier, itok, otok)
     breaker.record(tier, cost)
-    baseline = estimate_cost_usd("T3", itok, otok)  # what always-Pro would cost
+    baseline = estimate_baseline_usd(itok, otok)  # what all-cloud-frontier would cost
     trace.append(("DISPATCHED", time.time()))
 
     result = RouteResult(task_id, answer, tier, verdict.task_type,

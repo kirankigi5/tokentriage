@@ -19,7 +19,7 @@ import json
 import random
 from dataclasses import dataclass
 
-from google import genai
+from tokentriage import providers
 from tokentriage.models.registry import TIERS
 
 VERIFIER_INSTRUCTION = """You are a strict answer-quality judge.
@@ -58,13 +58,12 @@ def should_sample(policy: dict, chosen_tier: str) -> bool:
 
 
 def verify(task: str, answer: str) -> VerifyResult:
-    client = genai.Client(api_key=TIERS["T2"].api_key)
-    resp = client.models.generate_content(
-        model=TIERS["T2"].model_id,
-        contents=f"{VERIFIER_INSTRUCTION}\n\nTASK:\n{task}\n\nANSWER:\n{answer}",
+    text, _, _ = providers.generate(
+        TIERS["T2"],
+        f"{VERIFIER_INSTRUCTION}\n\nTASK:\n{task}\n\nANSWER:\n{answer}",
     )
     try:
-        raw = resp.text.strip().strip("`").removeprefix("json").strip()
+        raw = text.strip().strip("`").removeprefix("json").strip()
         d = json.loads(raw)
         v = d.get("verdict", "pass")
         return VerifyResult("fail" if v == "fail" else "pass",

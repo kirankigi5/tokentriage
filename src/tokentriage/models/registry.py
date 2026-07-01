@@ -1,10 +1,18 @@
 """Model pool registry.
 
-Four tiers, cheapest first. Tier 0 is the semantic cache ($0). Pricing is
-USD per 1M tokens and is served to agents via the MCP server — agents never
+Four tiers, cheapest first. Tier 0 is the semantic cache ($0). Prices are
+USD per 1M tokens and are served to agents via the MCP server — agents never
 hardcode prices, they *ask* for them (interoperability by design).
 
-Model IDs and pricing verified against Gemini API docs (July 2026).
+PHASE 1 (current): all tiers are local open-source models via Ollama, so the
+whole pipeline runs offline for $0 and produces REAL inference + REAL token
+counts. Local prices below are an *estimated compute cost* that scales with
+model size (bigger model = more energy/time), NOT a bill — they exist so the
+router can quantify the savings from choosing a smaller model, and so real
+cloud prices drop straight in for Phase 2/3.
+
+PHASE 2/3: point a tier at "gemini" or "openai" (set provider + model_id +
+api_key_env) and its real published price. Nothing above providers.py changes.
 """
 from __future__ import annotations
 
@@ -16,26 +24,43 @@ from tokentriage.config import settings
 @dataclass(frozen=True)
 class ModelTier:
     tier: str                 # "T0".."T3"
-    model_id: str             # Gemini model string ("" for cache)
-    input_usd_per_m: float    # $ / 1M input tokens
-    output_usd_per_m: float   # $ / 1M output tokens
-    api_key_env: str          # which env var holds this tier's key (isolation)
+    model_id: str             # backend model id ("" for cache)
+    input_usd_per_m: float    # $ / 1M input tokens  (estimated for local)
+    output_usd_per_m: float   # $ / 1M output tokens (estimated for local)
+    api_key_env: str          # env var holding this tier's key (cloud only)
+    provider: str = "ollama"  # "ollama" | "gemini" | "openai"
 
     @property
     def api_key(self) -> str:
-        import os
-        return os.getenv(self.api_key_env, "")
+        # Tier's own var first (isolation), then the shared-key fallback.
+        from tokentriage.config import tier_key
+        return tier_key(self.api_key_env) if self.api_key_env else ""
 
 
+# Phase 1 ladder: local qwen2.5 family, capability (and cost proxy) increasing.
+# Swap any entry for a cloud tier by changing provider/model_id/prices, e.g.
+#   "T3": ModelTier("T3", "gemini-2.5-flash", 0.30, 2.50, "TOKENTRIAGE_T3_API_KEY", "gemini")
 TIERS: dict[str, ModelTier] = {
-    "T0": ModelTier("T0", "semantic-cache", 0.0, 0.0, ""),
-    "T1": ModelTier("T1", "gemini-3.1-flash-lite", 0.25, 1.50, "TOKENTRIAGE_T1_API_KEY"),
-    "T2": ModelTier("T2", "gemini-3.5-flash", 1.50, 9.00, "TOKENTRIAGE_T2_API_KEY"),
-    "T3": ModelTier("T3", "gemini-3.1-pro", 2.00, 12.00, "TOKENTRIAGE_T3_API_KEY"),
+    "T0": ModelTier("T0", "semantic-cache", 0.0, 0.0, "", "cache"),
+    "T1": ModelTier("T1", "qwen2.5:3b",  0.02, 0.05, "", "ollama"),
+    "T2": ModelTier("T2", "qwen2.5:7b",  0.05, 0.12, "", "ollama"),
+    "T3": ModelTier("T3", "qwen2.5:14b", 0.10, 0.25, "", "ollama"),
 }
 
 # Ordered cheapest -> most expensive; routing walks this list upward.
 TIER_ORDER = ["T0", "T1", "T2", "T3"]
+
+# Cost baseline = the real alternative a business faces WITHOUT TokenTriage:
+# sending EVERY task to a frontier cloud model. Savings are measured against
+# this. It is never actually called in Phase 1 — it's the yardstick only.
+# (gemini-2.5-pro published price, USD per 1M tokens; edit to your reference.)
+BASELINE_REF = ModelTier("REF", "gemini-2.5-pro", 1.25, 10.00, "", "gemini")
+
+
+def estimate_baseline_usd(input_tokens: int, output_tokens: int) -> float:
+    """What this task WOULD cost sent to the cloud-frontier baseline model."""
+    return (input_tokens * BASELINE_REF.input_usd_per_m
+            + output_tokens * BASELINE_REF.output_usd_per_m) / 1_000_000
 
 
 def next_tier_up(tier: str) -> str | None:

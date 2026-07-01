@@ -3,9 +3,10 @@
 Classifies each incoming task into a structured verdict:
     complexity_score (0-1), task_type, estimated_output_tokens, rationale.
 
-Meta-point for the writeup: the router itself is cost-optimized — triage runs
-on the CHEAPEST paid tier (T1) with a tight structured-output schema, so the
-overhead of deciding is a tiny fraction of what it saves.
+Meta-point for the writeup: triage runs on a small, cheap LOCAL model (the mid
+tier, qwen2.5:7b) — capable enough to classify reliably, cheap enough that the
+overhead of deciding is a tiny fraction of what routing saves. (The 3B tier was
+too weak at the taxonomy; 7B gives clean labels at negligible cost.)
 
 ADK imports verified against google-adk >=1.0: LlmAgent and Agent are aliases;
 constructor accepts name, model, instruction, description, sub_agents.
@@ -15,7 +16,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from google import genai  # Gemini client; ADK wraps this same backend
+from tokentriage import providers
 from tokentriage.models.registry import TIERS
 
 # The closed set of task types. Must stay in sync with:
@@ -52,7 +53,7 @@ try:
 
     triage_agent = LlmAgent(
         name="triage_agent",
-        model=TIERS["T1"].model_id,          # cheapest tier does the triage
+        model=TIERS["T2"].model_id,          # small local model does the triage
         instruction=TRIAGE_INSTRUCTION,
         description="Scores task complexity and assigns a task taxonomy for routing.",
     )
@@ -67,13 +68,10 @@ def triage(task: str) -> TriageVerdict:
     is wired in orchestrator.py. Falls back to a conservative default if the
     model returns malformed JSON (fail-safe: unknown => route higher).
     """
-    client = genai.Client(api_key=TIERS["T1"].api_key)
-    resp = client.models.generate_content(
-        model=TIERS["T1"].model_id,
-        contents=f"{TRIAGE_INSTRUCTION}\n\nTASK:\n{task}",
-    )
+    text, _, _ = providers.generate(
+        TIERS["T2"], f"{TRIAGE_INSTRUCTION}\n\nTASK:\n{task}")
     try:
-        raw = resp.text.strip().strip("`").removeprefix("json").strip()
+        raw = text.strip().strip("`").removeprefix("json").strip()
         d = json.loads(raw)
         tt = d["task_type"] if d.get("task_type") in TASK_TYPES else "multi_step_reasoning"
         return TriageVerdict(

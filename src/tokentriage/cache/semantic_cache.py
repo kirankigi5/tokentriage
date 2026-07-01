@@ -18,12 +18,8 @@ import json
 import time
 
 import numpy as np
-from google import genai
 
-from tokentriage import db
-from tokentriage.config import settings
-
-_EMBED_MODEL = "gemini-embedding-2"  # current multimodal embedding model
+from tokentriage import db, providers
 
 
 class SemanticCache:
@@ -31,14 +27,14 @@ class SemanticCache:
         cache_pol = policy.get("cache", {})
         self.threshold = float(cache_pol.get("similarity_threshold", 0.95))
         self.ttl_s = float(cache_pol.get("ttl_hours", 168)) * 3600
-        self._client = genai.Client(api_key=settings.embed_api_key) \
-            if settings.embed_api_key else None
 
     def _embed(self, text: str) -> np.ndarray | None:
-        if self._client is None:
-            return None  # cache disabled without an embeddings key
-        resp = self._client.models.embed_content(model=_EMBED_MODEL, contents=text)
-        vec = np.array(resp.embeddings[0].values, dtype=np.float32)
+        # Embeddings come from the provider layer (local Ollama in Phase 1).
+        # Returns None if no embedder is available -> cache simply disabled.
+        values = providers.embed(text)
+        if not values:
+            return None
+        vec = np.array(values, dtype=np.float32)
         n = np.linalg.norm(vec)
         return vec / n if n > 0 else vec
 

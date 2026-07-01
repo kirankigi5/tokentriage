@@ -12,6 +12,24 @@ from pathlib import Path
 
 import yaml
 
+# Load .env if present so keys never need to be exported by hand (and never
+# live in code). Real keys go in .env, which is gitignored; .env.example is the
+# committed template. Per-tier vars win; a single GEMINI_API_KEY is the fallback.
+try:
+    from dotenv import find_dotenv, load_dotenv
+    load_dotenv(find_dotenv(usecwd=True))  # walk up from cwd to find the .env
+except ImportError:  # dotenv is optional; plain env vars still work
+    pass
+
+
+def tier_key(tier_env: str) -> str:
+    """Resolve a tier's API key: its own var first (isolation), then the shared
+    GEMINI_API_KEY / GOOGLE_API_KEY fallback so one key can power every tier."""
+    return (os.getenv(tier_env)
+            or os.getenv("GEMINI_API_KEY")
+            or os.getenv("GOOGLE_API_KEY")
+            or "")
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -20,10 +38,10 @@ class Settings:
     db_path: str = os.getenv("TOKENTRIAGE_DB_PATH", "tokentriage.db")
     policy_path: str = os.getenv("TOKENTRIAGE_POLICY_PATH", "config/policy.yaml")
     # Per-tier key isolation. Empty string == tier disabled.
-    t1_api_key: str = field(default_factory=lambda: os.getenv("TOKENTRIAGE_T1_API_KEY", ""))
-    t2_api_key: str = field(default_factory=lambda: os.getenv("TOKENTRIAGE_T2_API_KEY", ""))
-    t3_api_key: str = field(default_factory=lambda: os.getenv("TOKENTRIAGE_T3_API_KEY", ""))
-    embed_api_key: str = field(default_factory=lambda: os.getenv("TOKENTRIAGE_EMBED_API_KEY", ""))
+    t1_api_key: str = field(default_factory=lambda: tier_key("TOKENTRIAGE_T1_API_KEY"))
+    t2_api_key: str = field(default_factory=lambda: tier_key("TOKENTRIAGE_T2_API_KEY"))
+    t3_api_key: str = field(default_factory=lambda: tier_key("TOKENTRIAGE_T3_API_KEY"))
+    embed_api_key: str = field(default_factory=lambda: tier_key("TOKENTRIAGE_EMBED_API_KEY"))
 
 
 def load_policy(path: str | None = None) -> dict:
