@@ -37,6 +37,11 @@ class Settings:
     port: int = int(os.getenv("TOKENTRIAGE_PORT", "8000"))
     db_path: str = os.getenv("TOKENTRIAGE_DB_PATH", "tokentriage.db")
     policy_path: str = os.getenv("TOKENTRIAGE_POLICY_PATH", "config/policy.yaml")
+    # Run Triage/Verifier through the Google ADK Runner (LiteLLM -> local Ollama)
+    # instead of the fast direct HTTP path. Genuine ADK execution; a bit slower.
+    use_adk: bool = field(
+        default_factory=lambda: os.getenv("TOKENTRIAGE_USE_ADK", "").lower()
+        not in ("", "0", "false", "no"))
     # Per-tier key isolation. Empty string == tier disabled.
     t1_api_key: str = field(default_factory=lambda: tier_key("TOKENTRIAGE_T1_API_KEY"))
     t2_api_key: str = field(default_factory=lambda: tier_key("TOKENTRIAGE_T2_API_KEY"))

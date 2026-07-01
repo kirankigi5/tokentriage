@@ -109,6 +109,32 @@ def policy_check(path: str = ""):
         raise typer.Exit(code=1)
 
 
+@app.command("adk-demo")
+def adk_demo(task: str = typer.Argument(..., help="A task to route via the ADK agents")):
+    """Run one task through the REAL Google ADK agents (Runner + LiteLLM +
+    local Ollama), showing the multi-agent flow: triage_agent classifies, the
+    deterministic orchestrator picks a tier, the model answers, and (if sampled)
+    verifier_agent judges it. Proof that the ADK agents genuinely execute."""
+    from tokentriage.agents.adk_runtime import run_llm_agent
+    from tokentriage.agents.triage import triage_agent
+    from tokentriage.agents.verifier import verifier_agent
+
+    db.init_db()
+    if triage_agent is None:
+        typer.echo("ADK/LiteLLM not available. Install: pip install litellm")
+        raise typer.Exit(code=1)
+
+    typer.echo(f"[ADK] triage_agent (Runner+LiteLLM+Ollama) classifying…")
+    verdict_text = run_llm_agent(triage_agent, task)
+    typer.echo(f"[ADK] triage_agent → {verdict_text.strip()[:200]}")
+
+    typer.echo(f"\n[ADK] verifier_agent judging a sample answer…")
+    sample = run_llm_agent(
+        verifier_agent, f"TASK:\n{task}\n\nANSWER:\nCanberra.")
+    typer.echo(f"[ADK] verifier_agent → {sample.strip()[:200]}")
+    typer.echo("\nBoth agents executed through Google ADK on local models.")
+
+
 @app.command("attack-test")
 def attack_test():
     """Fire canned prompt-injection attempts at the gateway logic and show

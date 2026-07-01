@@ -20,6 +20,7 @@ from tokentriage.agents.orchestrator import route
 from tokentriage.cache.semantic_cache import SemanticCache
 from tokentriage.config import load_policy
 from tokentriage.mcp_server import tools as mcp_tools
+from tokentriage.models.registry import TIERS
 from tokentriage.security.gateway import RateLimiter, SecurityError, gateway_check
 
 app = FastAPI(title="TokenTriage — Inference Cost Engine")
@@ -43,12 +44,20 @@ async def chat_completions(request: Request):
     TokenTriage decides the model; that's the whole point."""
     body = await request.json()
     messages = body.get("messages", [])
-    task = "\n".join(m.get("content", "") for m in messages if m.get("role") == "user")
+    user_turns = [m.get("content", "") for m in messages if m.get("role") == "user"]
+    task = user_turns[-1] if user_turns else ""   # route on the LATEST user turn
     client_key = request.headers.get("authorization", "anonymous")
 
     try:
         task = gateway_check(task, client_key, _policy, _limiter)   # security first
-        result = route(task, _policy, _cache)                        # then routing
+        # Send the full conversation to the model for context, but reflect the
+        # sanitized latest turn back in so the model never sees the raw input.
+        sent = [dict(m) for m in messages]
+        for m in reversed(sent):
+            if m.get("role") == "user":
+                m["content"] = task
+                break
+        result = route(task, _policy, _cache, messages=sent or None)
     except SecurityError as e:
         return JSONResponse(status_code=e.status,
                             content={"error": {"type": "tokentriage_security",
@@ -68,6 +77,7 @@ async def chat_completions(request: Request):
         "tokentriage": {
             "task_id": result.task_id,
             "chosen_tier": result.chosen_tier,
+            "model_id": TIERS[result.chosen_tier].model_id if result.chosen_tier in TIERS else result.chosen_tier,
             "task_type": result.task_type,
             "complexity": result.complexity,
             "rationale": result.rationale,
@@ -91,6 +101,14 @@ def api_stats(window_hours: float = 24.0):
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard():
     html = Path(__file__).parent / "dashboard.html"
+    return html.read_text()
+
+
+@app.get("/", response_class=HTMLResponse)
+@app.get("/chat", response_class=HTMLResponse)
+def chat():
+    """The routing playground: type a message, watch the routing decision."""
+    html = Path(__file__).parent / "chat.html"
     return html.read_text()
 
 

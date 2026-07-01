@@ -78,12 +78,17 @@ yardstick. See `docs/architecture.md` for full design rationale.
 
 | Concept | Where |
 |---|---|
-| Multi-agent system | `src/tokentriage/agents/` — Orchestrator, Triage, Verifier |
+| Multi-agent system (Google ADK) | Triage + Verifier are ADK `LlmAgent`s running on local Ollama via LiteLLM (`TOKENTRIAGE_USE_ADK=1`; see `tokentriage adk-demo`), coordinated by a deterministic orchestrator |
 | MCP Server | `src/tokentriage/mcp_server/server.py` — custom pricing/benchmark/budget/log tools |
-| Security features | `src/tokentriage/security/` — gateway, budget circuit breaker, key isolation |
+| Security features | `src/tokentriage/security/` — gateway, injection screen, budget circuit breaker, key isolation, sensitive-task backstop |
 | Deployability | OpenAI-compatible proxy (`proxy/app.py`), Dockerfile |
-| Agent skills (CLI) | `src/tokentriage/cli.py` — serve / benchmark / report / tune / attack-test |
+| Agent skills (CLI) | `src/tokentriage/cli.py` — serve / benchmark / report / tune / adk-demo / attack-test |
 | Antigravity | Built in the Antigravity IDE (see video) |
+
+**ADK note:** routing/cost/escalation is deterministic *by design* — you don't
+want an LLM guessing price tiers. The genuine LLM agents are Triage and
+Verifier; both run through the ADK Runner on local models. `tokentriage
+adk-demo "<task>"` shows them executing.
 
 ## Quickstart (fully local, no API keys)
 

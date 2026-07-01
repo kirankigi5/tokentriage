@@ -38,10 +38,12 @@ class VerifyResult:
 # --- ADK agent definition -------------------------------------------------
 try:
     from google.adk.agents import LlmAgent
+    from google.adk.models.lite_llm import LiteLlm
 
     verifier_agent = LlmAgent(
         name="verifier_agent",
-        model=TIERS["T2"].model_id,          # mid tier judges cheap-tier answers
+        # Runs on the local mid-tier model via LiteLLM — genuine ADK, no cloud.
+        model=LiteLlm(model=f"ollama_chat/{TIERS['T2'].model_id}"),
         instruction=VERIFIER_INSTRUCTION,
         description="Samples cheap-tier answers and fails ones that need escalation.",
     )
@@ -58,13 +60,17 @@ def should_sample(policy: dict, chosen_tier: str) -> bool:
 
 
 def verify(task: str, answer: str) -> VerifyResult:
-    text, _, _ = providers.generate(
-        TIERS["T2"],
-        f"{VERIFIER_INSTRUCTION}\n\nTASK:\n{task}\n\nANSWER:\n{answer}",
-    )
+    from tokentriage.config import settings
+    prompt = f"TASK:\n{task}\n\nANSWER:\n{answer}"
+    if settings.use_adk and verifier_agent is not None:
+        from tokentriage.agents.adk_runtime import run_llm_agent
+        text = run_llm_agent(verifier_agent, prompt)  # instruction is on the agent
+    else:
+        text, _, _ = providers.generate(
+            TIERS["T2"], f"{VERIFIER_INSTRUCTION}\n\n{prompt}")
     try:
-        raw = text.strip().strip("`").removeprefix("json").strip()
-        d = json.loads(raw)
+        from tokentriage.agents.triage import extract_json
+        d = extract_json(text)
         v = d.get("verdict", "pass")
         return VerifyResult("fail" if v == "fail" else "pass",
                             str(d.get("reason", ""))[:200])

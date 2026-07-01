@@ -57,6 +57,7 @@ class RouteResult:
 # the gateway functional regardless.
 try:
     from google.adk.agents import Agent
+    from google.adk.models.lite_llm import LiteLlm
     from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioConnectionParams
     from mcp.client.stdio import StdioServerParameters
     from tokentriage.agents.triage import triage_agent
@@ -64,7 +65,7 @@ try:
 
     orchestrator_agent = Agent(
         name="tokentriage_orchestrator",
-        model=TIERS["T2"].model_id,
+        model=LiteLlm(model=f"ollama_chat/{TIERS['T2'].model_id}"),
         description="Routes tasks to the cheapest sufficient model tier.",
         instruction="Coordinate triage, policy-checked dispatch, and verification.",
         sub_agents=[a for a in (triage_agent, verifier_agent) if a],
@@ -109,14 +110,21 @@ def _pick_tier(policy: dict, verdict: TriageVerdict) -> tuple[str, str]:
     return candidates[-1], "no tier met floor; selected most capable allowed tier"
 
 
-def _dispatch(tier: str, task: str) -> tuple[str, int, int]:
+def _dispatch(tier: str, task: str, messages: list[dict] | None = None) -> tuple[str, int, int]:
     """Call the chosen model via the provider layer (Ollama/Gemini/OpenAI).
-    Returns (answer, input_tokens, output_tokens) with real backend counts."""
-    return providers.generate(TIERS[tier], task)
+    Returns (answer, input_tokens, output_tokens) with real backend counts.
+    `messages` carries multi-turn context; falls back to the single task."""
+    return providers.generate(TIERS[tier], task, messages)
 
 
-def route(task: str, policy: dict, cache: SemanticCache) -> RouteResult:
-    """Full state machine for one request. Task is ALREADY gateway-sanitized."""
+def route(task: str, policy: dict, cache: SemanticCache,
+          messages: list[dict] | None = None) -> RouteResult:
+    """Full state machine for one request. Task is ALREADY gateway-sanitized.
+
+    `task` (the latest user turn) drives cache/triage/routing/verify; `messages`
+    (full conversation) is what the chosen model actually answers, so follow-ups
+    keep context while routing still triages the current turn.
+    """
     task_id = uuid.uuid4().hex[:12]
     trace: list[tuple[str, float]] = [("SANITIZED", time.time())]
 
@@ -141,7 +149,7 @@ def route(task: str, policy: dict, cache: SemanticCache) -> RouteResult:
     trace.append(("POLICY_CHECKED", time.time()))
 
     # --- Dispatch -------------------------------------------------------------
-    answer, itok, otok = _dispatch(tier, task)
+    answer, itok, otok = _dispatch(tier, task, messages)
     cost = estimate_cost_usd(tier, itok, otok)
     breaker.record(tier, cost)
     baseline = estimate_baseline_usd(itok, otok)  # what all-cloud-frontier would cost
@@ -166,7 +174,7 @@ def route(task: str, policy: dict, cache: SemanticCache) -> RouteResult:
         if up is None:
             break
         # Escalate: re-answer one tier up; costs accumulate honestly.
-        answer, itok, otok = _dispatch(up, task)
+        answer, itok, otok = _dispatch(up, task, messages)
         ecost = estimate_cost_usd(up, itok, otok)
         breaker.record(up, ecost)
         result.answer = answer
