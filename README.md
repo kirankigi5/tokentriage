@@ -151,15 +151,18 @@ docs/architecture.md        design rationale
 Real run: 30-query business workload, all tiers on local open-source models
 (Apple M4), measured against the all-cloud-frontier baseline.
 
-<!-- TODO: fill final aggregate from `tokentriage report` -->
 | Metric | Value |
 |---|---|
-| Total cost (TokenTriage, local) | $__ |
-| Total cost (all-cloud-frontier baseline) | $__ |
-| **Savings** | **__%** |
-| Cache hits ($0) | __ / 30 |
-| Verification escalations | __ |
-| Tier utilization (T0/T1/T2/T3) | __ |
+| Total cost (TokenTriage, local) | **$0.00172** |
+| Total cost (all-cloud-frontier baseline) | $0.08892 |
+| **Savings** | **98.1%** |
+| Cache hits ($0) | 3 / 30 |
+| Verification escalations | 1 |
+| Tier utilization (T0/T1/T2/T3) | 3 / 13 / 5 / 9 |
+
+*Baseline = every task sent to gemini-2.5-pro (list price). TokenTriage runs
+all tiers on local open-source models, escalating only when the verifier flags
+a weak answer. Numbers reproduce via `tokentriage benchmark` (Apple M4).*
 
 ## License
 
