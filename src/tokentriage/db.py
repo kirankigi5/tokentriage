@@ -1,0 +1,203 @@
+"""SQLite persistence layer.
+
+One small DB, five tables:
+  decisions   — every routing decision with full trace (feeds dashboard + report)
+  feedback    — (task_type, tier, verdict) tuples; `tokentriage tune` learns from these
+  benchmarks  — per (model, task_type) measured accuracy; consumed via MCP tool
+  budget      — spend ledger; the circuit breaker reads daily totals here
+  cache       — semantic cache entries (embedding stored as JSON list)
+
+Deliberately SQLite: zero infra for judges to reproduce, and the whole state
+of the system is one inspectable file.
+"""
+from __future__ import annotations
+
+import json
+import sqlite3
+import time
+from contextlib import contextmanager
+
+from tokentriage.config import settings
+
+_SCHEMA = """
+CREATE TABLE IF NOT EXISTS decisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts REAL NOT NULL,
+    task_id TEXT NOT NULL,
+    task_preview TEXT,          -- first 120 chars, for the dashboard feed
+    task_type TEXT,
+    complexity REAL,
+    chosen_tier TEXT,
+    rationale TEXT,
+    cost_usd REAL,
+    baseline_cost_usd REAL,     -- what always-Pro would have cost
+    cache_hit INTEGER DEFAULT 0,
+    verified INTEGER DEFAULT 0, -- 0 = not sampled, 1 = sampled
+    verdict TEXT,               -- pass / fail / NULL
+    escalated_to TEXT           -- tier it escalated to, if any
+);
+CREATE TABLE IF NOT EXISTS feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts REAL NOT NULL,
+    task_type TEXT NOT NULL,
+    tier TEXT NOT NULL,
+    verdict TEXT NOT NULL       -- pass / fail
+);
+CREATE TABLE IF NOT EXISTS benchmarks (
+    model_tier TEXT NOT NULL,
+    task_type TEXT NOT NULL,
+    accuracy REAL NOT NULL,
+    samples INTEGER DEFAULT 0,
+    PRIMARY KEY (model_tier, task_type)
+);
+CREATE TABLE IF NOT EXISTS budget (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts REAL NOT NULL,
+    tier TEXT NOT NULL,
+    cost_usd REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts REAL NOT NULL,
+    task TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    embedding TEXT NOT NULL     -- JSON list[float]
+);
+CREATE TABLE IF NOT EXISTS quarantine (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts REAL NOT NULL,
+    task_preview TEXT,
+    reason TEXT
+);
+"""
+
+# Seed accuracies so routing works before any learning has happened.
+# `tokentriage tune` overwrites these from real verifier feedback.
+_SEED_BENCHMARKS = [
+    # (tier, task_type, accuracy)
+    ("T1", "factual_lookup", 0.96), ("T1", "classification", 0.93),
+    ("T1", "creative_short", 0.90), ("T1", "summarization", 0.88),
+    ("T1", "multi_step_reasoning", 0.61), ("T1", "code_generation", 0.70),
+    ("T1", "legal_or_financial", 0.55),
+    ("T2", "factual_lookup", 0.98), ("T2", "classification", 0.96),
+    ("T2", "creative_short", 0.94), ("T2", "summarization", 0.95),
+    ("T2", "multi_step_reasoning", 0.85), ("T2", "code_generation", 0.88),
+    ("T2", "legal_or_financial", 0.80),
+    ("T3", "factual_lookup", 0.99), ("T3", "classification", 0.98),
+    ("T3", "creative_short", 0.97), ("T3", "summarization", 0.98),
+    ("T3", "multi_step_reasoning", 0.96), ("T3", "code_generation", 0.95),
+    ("T3", "legal_or_financial", 0.94),
+]
+
+
+@contextmanager
+def conn():
+    c = sqlite3.connect(settings.db_path)
+    c.row_factory = sqlite3.Row
+    try:
+        yield c
+        c.commit()
+    finally:
+        c.close()
+
+
+def init_db() -> None:
+    with conn() as c:
+        c.executescript(_SCHEMA)
+        for tier, tt, acc in _SEED_BENCHMARKS:
+            c.execute(
+                "INSERT OR IGNORE INTO benchmarks (model_tier, task_type, accuracy, samples)"
+                " VALUES (?, ?, ?, 0)",
+                (tier, tt, acc),
+            )
+
+
+def log_decision(**kw) -> None:
+    with conn() as c:
+        c.execute(
+            """INSERT INTO decisions (ts, task_id, task_preview, task_type, complexity,
+               chosen_tier, rationale, cost_usd, baseline_cost_usd, cache_hit,
+               verified, verdict, escalated_to)
+               VALUES (:ts,:task_id,:task_preview,:task_type,:complexity,:chosen_tier,
+               :rationale,:cost_usd,:baseline_cost_usd,:cache_hit,:verified,:verdict,
+               :escalated_to)""",
+            {"ts": time.time(), "verdict": None, "escalated_to": None,
+             "verified": 0, "cache_hit": 0, **kw},
+        )
+
+
+def record_feedback(task_type: str, tier: str, verdict: str) -> None:
+    with conn() as c:
+        c.execute("INSERT INTO feedback (ts, task_type, tier, verdict) VALUES (?,?,?,?)",
+                  (time.time(), task_type, tier, verdict))
+
+
+def record_spend(tier: str, cost_usd: float) -> None:
+    with conn() as c:
+        c.execute("INSERT INTO budget (ts, tier, cost_usd) VALUES (?,?,?)",
+                  (time.time(), tier, cost_usd))
+
+
+def spend_today_usd() -> float:
+    day_start = time.time() - (time.time() % 86400)
+    with conn() as c:
+        row = c.execute("SELECT COALESCE(SUM(cost_usd),0) s FROM budget WHERE ts >= ?",
+                        (day_start,)).fetchone()
+        return float(row["s"])
+
+
+def get_benchmark(tier: str, task_type: str) -> float:
+    with conn() as c:
+        row = c.execute(
+            "SELECT accuracy FROM benchmarks WHERE model_tier=? AND task_type=?",
+            (tier, task_type)).fetchone()
+        # Unknown task types get a conservative low score -> routes higher. Safe default.
+        return float(row["accuracy"]) if row else 0.50
+
+
+def set_benchmark(tier: str, task_type: str, accuracy: float, samples: int) -> None:
+    with conn() as c:
+        c.execute(
+            """INSERT INTO benchmarks (model_tier, task_type, accuracy, samples)
+               VALUES (?,?,?,?)
+               ON CONFLICT(model_tier, task_type)
+               DO UPDATE SET accuracy=excluded.accuracy, samples=excluded.samples""",
+            (tier, task_type, accuracy, samples))
+
+
+def quarantine(task_preview: str, reason: str) -> None:
+    with conn() as c:
+        c.execute("INSERT INTO quarantine (ts, task_preview, reason) VALUES (?,?,?)",
+                  (time.time(), task_preview[:120], reason))
+
+
+def stats(window_hours: float = 24.0) -> dict:
+    """Aggregates for the dashboard and `tokentriage report`."""
+    since = time.time() - window_hours * 3600
+    with conn() as c:
+        row = c.execute(
+            """SELECT COUNT(*) n,
+                      COALESCE(SUM(cost_usd),0) cost,
+                      COALESCE(SUM(baseline_cost_usd),0) baseline,
+                      COALESCE(SUM(cache_hit),0) cache_hits,
+                      SUM(CASE WHEN escalated_to IS NOT NULL THEN 1 ELSE 0 END) escalations
+               FROM decisions WHERE ts >= ?""", (since,)).fetchone()
+        tiers = c.execute(
+            "SELECT chosen_tier, COUNT(*) n FROM decisions WHERE ts >= ? GROUP BY chosen_tier",
+            (since,)).fetchall()
+        recent = c.execute(
+            """SELECT ts, task_preview, task_type, chosen_tier, cost_usd, verdict, escalated_to
+               FROM decisions ORDER BY id DESC LIMIT 15""").fetchall()
+    baseline = row["baseline"] or 0.0
+    cost = row["cost"] or 0.0
+    return {
+        "requests": row["n"],
+        "cost_usd": round(cost, 6),
+        "baseline_usd": round(baseline, 6),
+        "savings_pct": round(100 * (1 - cost / baseline), 1) if baseline > 0 else 0.0,
+        "cache_hits": row["cache_hits"],
+        "escalations": row["escalations"] or 0,
+        "tier_utilization": {r["chosen_tier"]: r["n"] for r in tiers},
+        "budget_spent_today": round(spend_today_usd(), 6),
+        "recent": [dict(r) for r in recent],
+    }

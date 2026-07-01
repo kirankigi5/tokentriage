@@ -1,0 +1,30 @@
+{"task": "What is the capital of Australia?", "expect_type": "factual_lookup"}
+{"task": "What year did the Berlin Wall fall?", "expect_type": "factual_lookup"}
+{"task": "How many milliliters are in a liter?", "expect_type": "factual_lookup"}
+{"task": "What is the boiling point of water at sea level in Celsius?", "expect_type": "factual_lookup"}
+{"task": "Which planet is closest to the sun?", "expect_type": "factual_lookup"}
+{"task": "Classify this ticket as billing, technical, or account: 'I was charged twice for my subscription this month.'", "expect_type": "classification"}
+{"task": "Is this review positive or negative: 'The product broke after two days and support never replied.'", "expect_type": "classification"}
+{"task": "Tag this email as urgent or not-urgent: 'Server room temperature alarm triggered, all racks affected.'", "expect_type": "classification"}
+{"task": "Summarize in two sentences: Our Q3 launch shipped on time, adoption exceeded forecast by 12%, but churn in the SMB segment rose 3 points due to onboarding friction, which the CS team is addressing with a new guided setup flow.", "expect_type": "summarization"}
+{"task": "Summarize the key point: The migration to the new data warehouse reduced query latency by 60% but doubled storage costs; finance has asked engineering to evaluate tiered storage before further rollout.", "expect_type": "summarization"}
+{"task": "Write a two-line friendly reminder to the team that timesheets are due Friday.", "expect_type": "creative_short"}
+{"task": "Write a one-sentence product tagline for a reusable coffee cup.", "expect_type": "creative_short"}
+{"task": "Draft a short thank-you note for a customer who reported a bug.", "expect_type": "creative_short"}
+{"task": "Our support bot handled 12,000 queries last month at $0.008 each on the premium model. If 70% could run on a model costing $0.0004 per query, calculate the monthly and yearly savings, and explain the assumptions in your calculation.", "expect_type": "multi_step_reasoning"}
+{"task": "Compare our Q3 revenue of $2.4M against a forecast of $2.1M and a Q2 actual of $2.3M. Compute growth rates, explain the variance versus forecast, and list two plausible drivers to investigate.", "expect_type": "multi_step_reasoning"}
+{"task": "A warehouse ships 500 orders/day with a 2% error rate. A new scanner cuts errors by 60% but adds 5 seconds per order. At 8 seconds baseline per order and $0.90 cost per error, is the scanner worth it? Show your reasoning.", "expect_type": "multi_step_reasoning"}
+{"task": "We have three vendor quotes: A charges $10k flat, B charges $6k plus $50 per unit, C charges $80 per unit. At what unit volumes is each vendor cheapest? Walk through the breakeven analysis.", "expect_type": "multi_step_reasoning"}
+{"task": "Write a Python function that takes a list of (timestamp, cost) tuples and returns cumulative daily spend as a dict keyed by date.", "expect_type": "code_generation"}
+{"task": "Write a SQL query that returns the top 5 customers by total order value in the last 90 days from tables orders(id, customer_id, total, created_at) and customers(id, name).", "expect_type": "code_generation"}
+{"task": "Write a Python decorator that retries a function up to 3 times with exponential backoff.", "expect_type": "code_generation"}
+{"task": "Does our standard consulting contract's limitation-of-liability clause typically cover indirect damages, and what should we ask legal to review before signing a variant that caps liability at fees paid?", "expect_type": "legal_or_financial"}
+{"task": "Explain the tax implications of classifying a worker as a contractor versus an employee for a US small business, and what factors determine the classification.", "expect_type": "legal_or_financial"}
+{"task": "What should we consider before recognizing revenue on a 12-month SaaS contract paid upfront?", "expect_type": "legal_or_financial"}
+{"task": "What is the capital of Australia, please?", "expect_type": "factual_lookup", "note": "near-duplicate of #1 — should hit the semantic cache (T0)"}
+{"task": "Which city is Australia's capital?", "expect_type": "factual_lookup", "note": "paraphrase — cache hit candidate"}
+{"task": "Summarize in two sentences: Our Q3 launch shipped on time, adoption exceeded forecast by 12%, but churn in the SMB segment rose 3 points due to onboarding friction, which the CS team is addressing with a new guided setup flow. Thanks!", "expect_type": "summarization", "note": "near-duplicate — cache hit candidate"}
+{"task": "Is this review positive or negative: 'Setup took five minutes and it worked perfectly out of the box.'", "expect_type": "classification"}
+{"task": "Write a two-line reminder that the office is closed Monday for the public holiday.", "expect_type": "creative_short"}
+{"task": "Explain step by step how compound interest differs from simple interest, with a 3-year example at 5% on $1,000 for both.", "expect_type": "multi_step_reasoning"}
+{"task": "Write a Python function to validate that a string is a well-formed semantic version (major.minor.patch).", "expect_type": "code_generation"}

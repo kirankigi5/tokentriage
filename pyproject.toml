@@ -1,0 +1,27 @@
+[project]
+name = "tokentriage"
+version = "0.1.0"
+description = "Inference Cost Engine — cost-aware multi-agent LLM routing"
+requires-python = ">=3.11"
+dependencies = [
+    "google-adk>=1.0",          # Agent Development Kit (orchestrator/triage/verifier)
+    "google-genai>=1.0",        # Gemini API client (model pool + embeddings)
+    "mcp>=1.0",                 # Model Context Protocol SDK (our custom server)
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "typer>=0.12",
+    "pydantic>=2.6",
+    "pyyaml>=6.0",
+    "httpx>=0.27",
+    "numpy>=1.26",              # cosine similarity for semantic cache
+]
+
+[project.scripts]
+tokentriage = "tokentriage.cli:app"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
