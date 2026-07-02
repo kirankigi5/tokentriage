@@ -53,12 +53,23 @@
   }
   a{color:inherit}
   .shell{
-    width:min(1060px,100%);
+    width:min(1280px,100%);
     min-height:calc(100vh - 44px);
     margin:0 auto;
     display:grid;
-    grid-template-rows:auto 1fr;
+    grid-template-columns:280px minmax(0,1fr);
     gap:16px;
+  }
+  .sidebar{
+    min-height:0;
+    display:grid;
+    grid-template-rows:auto auto 1fr auto;
+    gap:14px;
+    padding:14px;
+    border:1px solid var(--rule);
+    border-radius:18px;
+    background:color-mix(in srgb, var(--panel) 94%, transparent);
+    box-shadow:var(--shadow);
   }
   .topbar{
     display:flex;
@@ -115,7 +126,100 @@
     text-decoration:none;
     cursor:pointer;
   }
+  .link-button.primary{
+    width:100%;
+    height:42px;
+    justify-content:center;
+    border-color:color-mix(in srgb, var(--qwen) 34%, var(--rule));
+    background:linear-gradient(135deg, color-mix(in srgb, var(--qwen) 12%, var(--panel)), var(--panel));
+  }
   .link-button.danger{color:var(--pro)}
+  .history-block{
+    min-height:0;
+    display:grid;
+    grid-template-rows:auto 1fr;
+    gap:9px;
+  }
+  .history-title{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    color:var(--muted);
+    font:900 11px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .history-list{
+    min-height:0;
+    overflow-y:auto;
+    display:grid;
+    align-content:start;
+    gap:6px;
+    padding-right:2px;
+  }
+  .history-item{
+    width:100%;
+    min-width:0;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 34px;
+    align-items:center;
+    gap:6px;
+    border:1px solid transparent;
+    border-radius:10px;
+    background:transparent;
+  }
+  .history-item:hover,
+  .history-item.is-active{
+    border-color:var(--rule);
+    background:var(--panel-2);
+  }
+  .history-load{
+    min-width:0;
+    display:grid;
+    gap:3px;
+    padding:9px 0 9px 10px;
+    color:var(--ink);
+    text-align:left;
+    text-decoration:none;
+  }
+  .history-load b{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font:800 13px/1.2 var(--sans);
+  }
+  .history-load span{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:var(--muted);
+    font:11px/1.2 var(--mono);
+  }
+  .history-delete{
+    width:28px;
+    height:28px;
+    display:grid;
+    place-items:center;
+    border:1px solid transparent;
+    border-radius:8px;
+    background:transparent;
+    color:var(--muted);
+    font:900 15px/1 var(--mono);
+    text-decoration:none;
+  }
+  .history-delete:hover{
+    border-color:color-mix(in srgb, var(--pro) 38%, var(--rule));
+    color:var(--pro);
+    background:color-mix(in srgb, var(--pro) 8%, transparent);
+  }
+  .hist-empty{
+    color:var(--muted);
+    padding:12px 4px;
+    font:12px/1.35 var(--mono);
+  }
+  .sidebar-foot{
+    display:grid;
+    gap:8px;
+  }
   .chat-shell{
     min-height:0;
     display:grid;
@@ -501,61 +605,25 @@
     cursor:pointer;
   }
   button.send:disabled{opacity:.58;cursor:wait}
-  .overlay{
-    position:fixed;
-    inset:0;
-    z-index:20;
-    display:grid;
-    place-items:center;
-    padding:22px;
-    background:color-mix(in srgb, var(--ink) 42%, transparent);
-  }
-  .overlay[hidden]{display:none}
-  .hist-panel{
-    width:min(560px,100%);
-    max-height:80vh;
-    display:grid;
-    grid-template-rows:auto 1fr;
-    border:1px solid var(--rule);
-    border-radius:16px;
-    background:var(--panel);
-    box-shadow:var(--shadow);
-    overflow:hidden;
-  }
-  .hist-head{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    padding:14px 16px;
-    border-bottom:1px solid var(--rule);
-    font:900 14px/1 var(--mono);
-  }
-  .hist-list{
-    overflow-y:auto;
-    padding:10px;
-    display:grid;
-    gap:8px;
-  }
-  .hist-item{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    padding:11px 13px;
-    border:1px solid var(--rule);
-    border-radius:12px;
-    background:var(--panel-2);
-  }
-  .hist-main{cursor:pointer;min-width:0;flex:1}
-  .hist-main b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .hist-main span{color:var(--muted);font:11px/1.3 var(--mono)}
-  .hist-empty{color:var(--muted);text-align:center;padding:24px}
   @keyframes spin{to{transform:rotate(360deg)}}
   @keyframes scan{to{transform:rotate(360deg)}}
   @media (max-width:860px){
     body{padding:12px}
-    .shell{min-height:calc(100vh - 24px)}
+    .shell{
+      min-height:calc(100vh - 24px);
+      grid-template-columns:1fr;
+      grid-template-rows:auto 1fr;
+    }
+    .sidebar{
+      grid-template-rows:auto auto;
+      min-height:auto;
+    }
+    .history-block{
+      max-height:220px;
+    }
+    .sidebar-foot{
+      display:none;
+    }
     .chat-shell{border-radius:14px}
     #feed{padding:18px;min-height:330px}
     .rail-track{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -580,7 +648,7 @@
 </head>
 <body>
 <div class="shell">
-  <header class="topbar">
+  <aside class="sidebar" aria-label="Conversation history">
     <div class="brand">
       <div class="brand-mark">TT</div>
       <div>
@@ -588,22 +656,23 @@
         <p>local-first inference router</p>
       </div>
     </div>
-    <div class="top-actions">
-      <a class="link-button" href="#" id="historyBtn">History</a>
-      <a class="link-button danger" href="#" id="clear">New</a>
+
+    <a class="link-button primary" href="#" id="clear">New chat</a>
+
+    <div class="history-block">
+      <div class="history-title">
+        <span>Chats</span>
+        <span id="historyCount"></span>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="hist-empty">Loading...</div>
+      </div>
+    </div>
+
+    <div class="sidebar-foot">
       <a class="link-button" href="/dashboard">Ledger</a>
     </div>
-  </header>
-
-  <div class="overlay" id="historyOverlay" hidden>
-    <div class="hist-panel">
-      <div class="hist-head">
-        <b>Saved conversations</b>
-        <a class="link-button" href="#" id="historyClose">Close</a>
-      </div>
-      <div class="hist-list" id="historyList"></div>
-    </div>
-  </div>
+  </aside>
 
   <main class="chat-shell">
     <section id="feed" aria-live="polite">
@@ -768,7 +837,9 @@ localStorage.setItem(CONV_KEY, convId);
 function persist(){
   if(!history.length) return;
   fetch('/conversations', {method:'POST', headers:{'content-type':'application/json'},
-    body: JSON.stringify({id: convId, messages: history})}).catch(()=>{});
+    body: JSON.stringify({id: convId, messages: history})})
+    .then(() => refreshHistory())
+    .catch(()=>{});
 }
 function save(){ localStorage.setItem(KEY, JSON.stringify(history)); persist(); }
 
@@ -968,25 +1039,31 @@ document.getElementById('clear').addEventListener('click', (e)=>{
   save();                               // persist() no-ops on empty history
   renderAll();
   resetRail();
+  refreshHistory();
+  input.focus();
 });
 
 // --- Saved-conversation history (server-side) -----------------------------
-async function openHistory(){
+async function refreshHistory(){
   const list = document.getElementById('historyList');
-  document.getElementById('historyOverlay').hidden = false;
-  list.innerHTML = '<div class="hist-empty">Loading…</div>';
+  const count = document.getElementById('historyCount');
+  list.innerHTML = '<div class="hist-empty">Loading...</div>';
   try{
     const items = await (await fetch('/conversations')).json();
-    if(!items.length){ list.innerHTML = '<div class="hist-empty">No saved conversations yet.</div>'; return; }
+    count.textContent = items.length ? String(items.length) : '';
+    if(!items.length){ list.innerHTML = '<div class="hist-empty">No saved chats yet.</div>'; return; }
     list.innerHTML = items.map(it => `
-      <div class="hist-item">
-        <div class="hist-main" data-load="${esc(it.id)}">
+      <div class="history-item ${it.id===convId?'is-active':''}">
+        <a class="history-load" href="#" data-load="${esc(it.id)}">
           <b>${esc(it.title || 'Untitled')}</b>
-          <span>${it.n} msgs · ${new Date((it.updated_at||0)*1000).toLocaleString()}${it.id===convId?' · current':''}</span>
-        </div>
-        <a href="#" class="link-button danger" data-del="${esc(it.id)}">Delete</a>
+          <span>${it.n} msgs · ${new Date((it.updated_at||0)*1000).toLocaleDateString()}</span>
+        </a>
+        <a href="#" class="history-delete" data-del="${esc(it.id)}" aria-label="Delete ${esc(it.title || 'conversation')}">x</a>
       </div>`).join('');
-  }catch(e){ list.innerHTML = '<div class="hist-empty">Failed to load.</div>'; }
+  }catch(e){
+    count.textContent = '';
+    list.innerHTML = '<div class="hist-empty">Failed to load chats.</div>';
+  }
 }
 async function loadConversation(id){
   try{
@@ -998,16 +1075,22 @@ async function loadConversation(id){
     renderAll();
     const last = [...history].reverse().find(m => m.role === 'assistant' && m.meta);
     if(last) finishRouting(last.meta); else resetRail();
+    refreshHistory();
+    input.focus();
   }catch(e){}
-  document.getElementById('historyOverlay').hidden = true;
 }
 async function delConversation(id){
   try{ await fetch('/conversations/' + encodeURIComponent(id), {method:'DELETE'}); }catch(e){}
-  openHistory();
+  if(id === convId){
+    history = [];
+    convId = newConvId();
+    localStorage.setItem(CONV_KEY, convId);
+    localStorage.setItem(KEY, JSON.stringify(history));
+    renderAll();
+    resetRail();
+  }
+  refreshHistory();
 }
-document.getElementById('historyBtn').addEventListener('click', (e)=>{ e.preventDefault(); openHistory(); });
-document.getElementById('historyClose').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('historyOverlay').hidden = true; });
-document.getElementById('historyOverlay').addEventListener('click', (e)=>{ if(e.target.id === 'historyOverlay') e.target.hidden = true; });
 document.getElementById('historyList').addEventListener('click', (e)=>{
   const del = e.target.closest('[data-del]');
   const load = e.target.closest('[data-load]');
@@ -1031,6 +1114,7 @@ input.addEventListener('keydown', (e)=>{
 
 renderRail();
 renderAll();
+refreshHistory();
 </script>
 </body>
 </html>
