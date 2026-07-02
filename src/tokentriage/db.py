@@ -69,6 +69,20 @@ CREATE TABLE IF NOT EXISTS quarantine (
     task_preview TEXT,
     reason TEXT
 );
+CREATE TABLE IF NOT EXISTS conversations (
+    id TEXT PRIMARY KEY,
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL,
+    title TEXT
+);
+CREATE TABLE IF NOT EXISTS conv_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id TEXT NOT NULL,
+    ts REAL NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    extra TEXT               -- JSON of non-core fields (routing meta, latency)
+);
 """
 
 # Seed accuracies so routing works before any learning has happened.
@@ -169,6 +183,61 @@ def quarantine(task_preview: str, reason: str) -> None:
     with conn() as c:
         c.execute("INSERT INTO quarantine (ts, task_preview, reason) VALUES (?,?,?)",
                   (time.time(), task_preview[:120], reason))
+
+
+def save_conversation(conv_id: str, messages: list[dict], title: str | None = None) -> str:
+    """Persist a whole conversation (full replace of its messages). Title defaults
+    to the first user turn. Non-core fields (routing meta, latency) go in `extra`."""
+    now = time.time()
+    if not title:
+        first = next((m.get("content", "") for m in messages if m.get("role") == "user"), "")
+        title = (first[:60] or "New chat")
+    with conn() as c:
+        c.execute(
+            """INSERT INTO conversations (id, created_at, updated_at, title)
+               VALUES (?,?,?,?)
+               ON CONFLICT(id) DO UPDATE SET updated_at=excluded.updated_at,
+                                             title=excluded.title""",
+            (conv_id, now, now, title))
+        c.execute("DELETE FROM conv_messages WHERE conversation_id=?", (conv_id,))
+        for m in messages:
+            extra = {k: v for k, v in m.items() if k not in ("role", "content")}
+            c.execute(
+                "INSERT INTO conv_messages (conversation_id, ts, role, content, extra)"
+                " VALUES (?,?,?,?,?)",
+                (conv_id, now, m.get("role", "user"), m.get("content", ""),
+                 json.dumps(extra) if extra else None))
+    return conv_id
+
+
+def list_conversations(limit: int = 50) -> list[dict]:
+    with conn() as c:
+        rows = c.execute(
+            """SELECT c.id, c.title, c.updated_at,
+                      (SELECT COUNT(*) FROM conv_messages m WHERE m.conversation_id=c.id) AS n
+               FROM conversations c ORDER BY c.updated_at DESC LIMIT ?""",
+            (limit,)).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_conversation(conv_id: str) -> list[dict]:
+    with conn() as c:
+        rows = c.execute(
+            "SELECT role, content, extra FROM conv_messages"
+            " WHERE conversation_id=? ORDER BY id", (conv_id,)).fetchall()
+    msgs = []
+    for r in rows:
+        m = {"role": r["role"], "content": r["content"]}
+        if r["extra"]:
+            m.update(json.loads(r["extra"]))
+        msgs.append(m)
+    return msgs
+
+
+def delete_conversation(conv_id: str) -> None:
+    with conn() as c:
+        c.execute("DELETE FROM conv_messages WHERE conversation_id=?", (conv_id,))
+        c.execute("DELETE FROM conversations WHERE id=?", (conv_id,))
 
 
 def stats(window_hours: float = 24.0) -> dict:

@@ -163,7 +163,7 @@ def _dispatch(tier: str, task: str, messages: list[dict] | None = None) -> tuple
 
 
 def route(task: str, policy: dict, cache: SemanticCache,
-          messages: list[dict] | None = None) -> RouteResult:
+          messages: list[dict] | None = None, on_event=None) -> RouteResult:
     """Full state machine for one request. Task is ALREADY gateway-sanitized.
 
     `task` (the latest user turn) drives cache/triage/routing/verify; `messages`
@@ -171,37 +171,50 @@ def route(task: str, policy: dict, cache: SemanticCache,
     keep context while routing still triages the current turn.
     """
     task_id = uuid.uuid4().hex[:12]
-    trace: list[tuple[str, float]] = [("SANITIZED", time.time())]
+    trace: list[tuple[str, float]] = []
+
+    def emit(stage: str, **detail):
+        """Record a pipeline stage AND stream it live to any listener."""
+        trace.append((stage, time.time()))
+        if on_event:
+            on_event(stage, detail)
+
+    emit("SANITIZED", detail="input checked & sanitized")
 
     # --- T0: semantic cache -------------------------------------------------
     if policy.get("cache", {}).get("enabled", True):
         hit = cache.lookup(task)
         if hit is not None:
-            trace.append(("CACHE_HIT", time.time()))
+            emit("CACHE_HIT", detail="semantic match found — $0, no model call")
             baseline = estimate_baseline_usd(len(task) // 4, len(hit) // 4)
             r = RouteResult(task_id, hit, "T0", "cached", 0.0,
                             "semantic cache hit", 0.0, baseline,
                             cache_hit=True, trace=trace)
+            emit("DONE", tier="T0", cost=0.0)
             _log(r, task)
             return r
+        emit("CACHE_MISS", detail="no semantic match — routing")
 
     # --- Triage ---------------------------------------------------------------
     verdict = triage(task)
-    trace.append(("TRIAGED", time.time()))
+    emit("TRIAGED", task_type=verdict.task_type, complexity=verdict.complexity_score,
+         detail=verdict.rationale)
 
     # --- Price + policy + budget ------------------------------------------
     tier, why = _pick_tier(policy, verdict)
-    trace.append(("POLICY_CHECKED", time.time()))
+    emit("ROUTED", tier=tier, model=TIERS[tier].model_id, detail=why)
 
     # --- Dispatch (privacy policy governs cloud context) ------------------
     send_msgs, cnote = _privacy_context(TIERS[tier], task, messages, policy)
+    emit("DISPATCHING", tier=tier, model=TIERS[tier].model_id,
+         detail=f"generating on {TIERS[tier].model_id}")
     answer, itok, otok = _dispatch(tier, task, send_msgs)
     cost = estimate_cost_usd(tier, itok, otok)
     breaker.record(tier, cost)
     baseline = estimate_baseline_usd(itok, otok)  # what all-cloud-frontier would cost
     if cnote:
-        trace.append((cnote, time.time()))
-    trace.append(("DISPATCHED", time.time()))
+        emit("CONTEXT", detail=cnote)
+    emit("DISPATCHED", cost=cost, tokens=itok + otok, detail=f"answered by {TIERS[tier].model_id}")
 
     result = RouteResult(task_id, answer, tier, verdict.task_type,
                          verdict.complexity_score,
@@ -213,16 +226,19 @@ def route(task: str, policy: dict, cache: SemanticCache,
     hops = 0
     while should_sample(policy, result.chosen_tier, task) and hops < max_hops:
         result.verified = True
+        emit("VERIFYING", detail=f"sampling {result.chosen_tier} answer for quality")
         vr = verify(task, result.answer)
         result.verdict = vr.verdict
         db.record_feedback(verdict.task_type, result.chosen_tier, vr.verdict)
-        trace.append((f"VERIFIED_{vr.verdict.upper()}", time.time()))
+        emit(f"VERIFIED_{vr.verdict.upper()}", detail=vr.reason)
         if vr.verdict == "pass":
             break
         up = next_tier_up(result.chosen_tier)
         if up is None:
             break
         # Escalate: re-answer one tier up; costs accumulate honestly.
+        emit("ESCALATING", tier=up, model=TIERS[up].model_id,
+             detail=f"answer too thin — retrying on {TIERS[up].model_id}")
         send_msgs, cnote = _privacy_context(TIERS[up], task, messages, policy)
         answer, itok, otok = _dispatch(up, task, send_msgs)
         ecost = estimate_cost_usd(up, itok, otok)
@@ -234,11 +250,12 @@ def route(task: str, policy: dict, cache: SemanticCache,
         if cnote:
             result.context_note = cnote
         hops += 1
-        trace.append((f"ESCALATED_{up}", time.time()))
+        emit(f"ESCALATED_{up}", tier=up)
 
     # --- Cache the final answer + log --------------------------------------
     if policy.get("cache", {}).get("enabled", True) and not result.cache_hit:
         cache.store(task, result.answer)
+    emit("DONE", tier=result.chosen_tier, cost=result.cost_usd)
     _log(result, task)
     return result
 

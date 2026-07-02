@@ -3,104 +3,635 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TokenTriage — Ledger</title>
+<title>TokenTriage - Ledger</title>
 <style>
-  /* Design: a cost ledger. Banknote-green ink on paper, tabular monospace
-     numerals, hairline rules. The signature element is the budget burn bar. */
   :root{
-    --paper:#F7F6F1; --ink:#17281F; --green:#1B4D3E; --green-soft:#DCE7E0;
-    --amber:#9A6A12; --red:#8C3226; --rule:#C9CFC7; --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    color-scheme:light;
+    --paper:#f8f5ee;
+    --panel:#fffdf8;
+    --panel-2:#f0eee7;
+    --ink:#17201c;
+    --muted:#6a706b;
+    --rule:#d7d0c2;
+    --cache:#168a68;
+    --qwen:#385acb;
+    --qwen-2:#6f46c8;
+    --pro:#c24a3a;
+    --verify:#a66b11;
+    --shadow:0 18px 55px rgba(28,32,28,.12);
+    --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    --sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   }
-  @media (prefers-color-scheme: dark){
-    :root{ --paper:#141A16; --ink:#E8EDE8; --green:#7FB89F; --green-soft:#22352B;
-           --amber:#D9A441; --red:#D97B6C; --rule:#2E3A32; }
+  @media (prefers-color-scheme:dark){
+    :root{
+      color-scheme:dark;
+      --paper:#151512;
+      --panel:#1e1e19;
+      --panel-2:#28271f;
+      --ink:#f1efe7;
+      --muted:#aaa59a;
+      --rule:#3b382f;
+      --cache:#46c59c;
+      --qwen:#7f9aff;
+      --qwen-2:#ac84ff;
+      --pro:#ff846f;
+      --verify:#e1a540;
+      --shadow:0 18px 55px rgba(0,0,0,.35);
+    }
   }
-  *{box-sizing:border-box;margin:0}
-  body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--mono);padding:32px;max-width:1080px;margin:0 auto}
-  header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:10px}
-  h1{font-size:18px;letter-spacing:.08em;text-transform:uppercase}
-  h1 span{color:var(--green)}
-  .stamp{font-size:12px;color:var(--green)}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:24px}
-  .cell{background:var(--paper);padding:16px}
-  .cell .label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;opacity:.65}
-  .cell .value{font-size:28px;font-variant-numeric:tabular-nums;margin-top:4px}
-  .value.save{color:var(--green)}
-  .value.warn{color:var(--amber)}
-  /* Signature: budget burn bar */
-  .burn{margin-top:24px}
-  .burn .label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;opacity:.65;display:flex;justify-content:space-between}
-  .burn .bar{height:14px;border:1px solid var(--ink);margin-top:6px;position:relative;background:var(--green-soft)}
-  .burn .fill{position:absolute;inset:0;width:0%;background:var(--green);transition:width .6s ease}
-  .burn.hot .fill{background:var(--red)}
-  .tiers{margin-top:24px;display:flex;gap:1px;background:var(--rule);border:1px solid var(--rule)}
-  .tier{background:var(--paper);flex:1;padding:10px 12px;font-size:13px}
-  .tier b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
-  table{width:100%;border-collapse:collapse;margin-top:24px;font-size:13px}
-  caption{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.12em;opacity:.65;padding-bottom:8px}
-  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule);font-variant-numeric:tabular-nums}
-  th{font-size:11px;text-transform:uppercase;letter-spacing:.1em;opacity:.65}
-  td.tier-T0{color:var(--green)} td.esc{color:var(--amber)} td.fail{color:var(--red)}
-  @media (prefers-reduced-motion: reduce){ .burn .fill{transition:none} }
+  *{box-sizing:border-box}
+  html,body{min-height:100%;margin:0}
+  body{
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px) 0 0/42px 42px,
+      linear-gradient(0deg, color-mix(in srgb, var(--rule) 28%, transparent) 1px, transparent 1px) 0 0/42px 42px,
+      linear-gradient(135deg, color-mix(in srgb, var(--cache) 7%, transparent), transparent 34%),
+      var(--paper);
+    color:var(--ink);
+    font:15px/1.5 var(--sans);
+    padding:22px;
+  }
+  a{color:inherit}
+  .shell{
+    width:min(1180px,100%);
+    min-height:calc(100vh - 44px);
+    margin:0 auto;
+    display:grid;
+    grid-template-rows:auto 1fr;
+    gap:16px;
+  }
+  .topbar{
+    min-height:58px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+  }
+  .brand{
+    min-width:0;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .brand-mark{
+    width:42px;
+    height:42px;
+    display:grid;
+    place-items:center;
+    border:1px solid var(--ink);
+    border-radius:8px;
+    background:linear-gradient(135deg,var(--ink),color-mix(in srgb,var(--ink) 72%,var(--cache)));
+    color:var(--paper);
+    box-shadow:5px 5px 0 color-mix(in srgb, var(--cache) 36%, transparent);
+    font:800 13px/1 var(--mono);
+  }
+  h1{
+    margin:0;
+    font-size:clamp(18px,2vw,24px);
+    line-height:1.05;
+  }
+  .brand p{
+    margin:3px 0 0;
+    color:var(--muted);
+    font:12px/1.2 var(--mono);
+  }
+  .top-actions{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .link-button{
+    height:36px;
+    min-width:84px;
+    padding:0 12px;
+    display:inline-grid;
+    place-items:center;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:color-mix(in srgb, var(--panel) 86%, transparent);
+    color:var(--ink);
+    text-decoration:none;
+    font:800 12px/1 var(--mono);
+    cursor:pointer;
+  }
+  .stamp{
+    height:36px;
+    min-width:112px;
+    display:grid;
+    place-items:center;
+    border:1px solid color-mix(in srgb, var(--cache) 46%, var(--rule));
+    border-radius:8px;
+    color:var(--cache);
+    background:color-mix(in srgb, var(--cache) 8%, var(--panel));
+    font:800 12px/1 var(--mono);
+  }
+  .ledger-shell{
+    min-height:0;
+    display:grid;
+    grid-template-rows:auto auto 1fr;
+    border:1px solid var(--rule);
+    border-radius:12px;
+    background:color-mix(in srgb, var(--panel) 94%, transparent);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .hero{
+    display:grid;
+    grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);
+    gap:1px;
+    background:var(--rule);
+  }
+  .hero-main,
+  .budget-panel{
+    background:var(--panel);
+    padding:18px;
+  }
+  .hero-main{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:1px;
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--cache) 8%, transparent), transparent 42%),
+      var(--rule);
+  }
+  .metric{
+    min-width:0;
+    min-height:96px;
+    display:grid;
+    align-content:center;
+    gap:8px;
+    background:var(--panel);
+    padding:14px;
+  }
+  .metric span,
+  .section-title span,
+  th{
+    color:var(--muted);
+    font:800 10px/1.1 var(--mono);
+    text-transform:uppercase;
+  }
+  .metric b{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font:900 clamp(22px,3vw,34px)/1 var(--mono);
+    font-variant-numeric:tabular-nums;
+  }
+  .metric.save b{color:var(--cache)}
+  .metric.warn b{color:var(--verify)}
+  .budget-panel{
+    min-width:0;
+    display:grid;
+    align-content:space-between;
+    gap:18px;
+  }
+  .budget-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+  }
+  .budget-top b{
+    display:block;
+    margin-top:6px;
+    font:900 24px/1 var(--mono);
+    font-variant-numeric:tabular-nums;
+  }
+  .budget-cap{
+    color:var(--muted);
+    text-align:right;
+    font:800 12px/1.3 var(--mono);
+  }
+  .burn{
+    display:grid;
+    gap:8px;
+  }
+  .burn-track{
+    height:18px;
+    overflow:hidden;
+    border:1px solid var(--ink);
+    border-radius:8px;
+    background:color-mix(in srgb, var(--cache) 12%, var(--panel-2));
+  }
+  .burn-fill{
+    width:0%;
+    height:100%;
+    background:linear-gradient(90deg,var(--cache),color-mix(in srgb,var(--qwen) 42%,var(--cache)));
+    transition:width .45s ease, background .2s ease;
+  }
+  .burn.hot .burn-fill{
+    background:linear-gradient(90deg,var(--verify),var(--pro));
+  }
+  .burn-label{
+    display:flex;
+    justify-content:space-between;
+    color:var(--muted);
+    font:800 11px/1 var(--mono);
+  }
+  .models{
+    display:grid;
+    gap:12px;
+    padding:16px 18px;
+    border-top:1px solid var(--rule);
+    background:var(--panel-2);
+  }
+  .section-title{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .section-title b{
+    font:900 14px/1 var(--mono);
+  }
+  .model-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+  }
+  .model-row{
+    min-width:0;
+    min-height:112px;
+    display:grid;
+    grid-template-columns:48px minmax(0,1fr);
+    grid-template-rows:auto auto;
+    gap:9px 10px;
+    align-items:center;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:var(--panel);
+    padding:12px;
+    transition:transform .18s ease, border-color .18s ease, background .18s ease;
+  }
+  .model-row.is-active{
+    transform:translateY(-2px);
+    border-color:color-mix(in srgb, var(--accent) 68%, var(--rule));
+    background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 13%, var(--panel)), var(--panel));
+  }
+  .model-logo{
+    width:48px;
+    height:48px;
+    display:grid;
+    place-items:center;
+    border-radius:8px;
+    color:white;
+    background:linear-gradient(135deg,var(--accent),color-mix(in srgb, var(--accent) 62%, black));
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.24);
+    font:900 13px/1 var(--mono);
+  }
+  .model-copy{
+    min-width:0;
+  }
+  .model-copy b,
+  .model-copy span{
+    display:block;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .model-copy b{font-size:14px}
+  .model-copy span{
+    margin-top:2px;
+    color:var(--muted);
+    font:800 11px/1.2 var(--mono);
+  }
+  .model-count{
+    grid-column:1/-1;
+    display:grid;
+    gap:7px;
+  }
+  .model-count-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    font:900 12px/1 var(--mono);
+  }
+  .bar{
+    height:8px;
+    overflow:hidden;
+    border-radius:8px;
+    background:color-mix(in srgb, var(--rule) 72%, transparent);
+  }
+  .bar-fill{
+    width:0%;
+    height:100%;
+    border-radius:inherit;
+    background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 64%,var(--ink)));
+    transition:width .45s ease;
+  }
+  .feed-wrap{
+    min-height:0;
+    overflow:auto;
+    background:var(--panel);
+    border-top:1px solid var(--rule);
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+  }
+  caption{
+    text-align:left;
+    padding:15px 18px 11px;
+    color:var(--muted);
+    font:800 10px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  th,td{
+    text-align:left;
+    padding:11px 12px;
+    border-bottom:1px solid var(--rule);
+    vertical-align:middle;
+  }
+  th:first-child,
+  td:first-child{padding-left:18px}
+  th:last-child,
+  td:last-child{padding-right:18px}
+  td{
+    font-variant-numeric:tabular-nums;
+  }
+  .task-cell{
+    min-width:260px;
+    max-width:520px;
+  }
+  .task-title{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .task-meta{
+    margin-top:3px;
+    color:var(--muted);
+    font:800 11px/1.2 var(--mono);
+  }
+  .tier-cell{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    min-width:118px;
+  }
+  .tiny-logo{
+    width:32px;
+    height:32px;
+    display:grid;
+    place-items:center;
+    flex:0 0 32px;
+    border-radius:8px;
+    color:white;
+    background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 60%,black));
+    font:900 11px/1 var(--mono);
+  }
+  .tier-name{
+    display:grid;
+    gap:2px;
+    min-width:0;
+  }
+  .tier-name b,
+  .tier-name span{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .tier-name b{font:900 12px/1 var(--mono)}
+  .tier-name span{color:var(--muted);font:800 10px/1 var(--mono)}
+  .pill{
+    display:inline-grid;
+    place-items:center;
+    min-height:26px;
+    padding:0 9px;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:var(--panel-2);
+    font:900 11px/1 var(--mono);
+    white-space:nowrap;
+  }
+  .pill.pass{color:var(--cache);border-color:color-mix(in srgb,var(--cache) 38%,var(--rule))}
+  .pill.fail{color:var(--pro);border-color:color-mix(in srgb,var(--pro) 38%,var(--rule))}
+  .pill.warn{color:var(--verify);border-color:color-mix(in srgb,var(--verify) 38%,var(--rule))}
+  .empty{
+    padding:28px 18px;
+    color:var(--muted);
+    font:800 12px/1.4 var(--mono);
+  }
+  @media (max-width:960px){
+    body{padding:12px}
+    .shell{min-height:calc(100vh - 24px)}
+    .hero{grid-template-columns:1fr}
+    .hero-main{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .model-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (max-width:620px){
+    .topbar{align-items:flex-start;flex-direction:column}
+    .top-actions{width:100%;justify-content:stretch}
+    .link-button,.stamp{flex:1;min-width:0}
+    .hero-main{grid-template-columns:1fr}
+    .model-grid{grid-template-columns:1fr}
+    .metric{min-height:82px}
+    .task-cell{min-width:220px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important}
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>Token<span>Triage</span> — ledger</h1>
-  <div><a href="/chat" style="color:var(--green);font-size:12px;text-decoration:none;text-transform:uppercase;letter-spacing:.1em;margin-right:14px">← playground</a><span class="stamp" id="stamp">connecting…</span></div>
-</header>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">TT</div>
+      <div>
+        <h1>TokenTriage Ledger</h1>
+        <p>spend, cache, verification, and model routing</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <a class="link-button" href="/chat">Chat</a>
+      <button class="link-button" type="button" id="refresh">Refresh</button>
+      <span class="stamp" id="stamp">Connecting</span>
+    </div>
+  </header>
 
-<div class="grid">
-  <div class="cell"><div class="label">Requests (24h)</div><div class="value" id="req">–</div></div>
-  <div class="cell"><div class="label">Spend</div><div class="value" id="cost">–</div></div>
-  <div class="cell"><div class="label">Always-Pro baseline</div><div class="value" id="base">–</div></div>
-  <div class="cell"><div class="label">Saved</div><div class="value save" id="save">–</div></div>
-  <div class="cell"><div class="label">Cache hits ($0)</div><div class="value save" id="cache">–</div></div>
-  <div class="cell"><div class="label">Escalations</div><div class="value warn" id="esc">–</div></div>
+  <main class="ledger-shell">
+    <section class="hero" aria-label="Ledger summary">
+      <div class="hero-main">
+        <div class="metric">
+          <span>Requests 24h</span>
+          <b id="req">0</b>
+        </div>
+        <div class="metric">
+          <span>TokenTriage Spend</span>
+          <b id="cost">$0.0000</b>
+        </div>
+        <div class="metric">
+          <span>Always-Pro Base</span>
+          <b id="base">$0.0000</b>
+        </div>
+        <div class="metric save">
+          <span>Savings</span>
+          <b id="save">0.0%</b>
+        </div>
+      </div>
+      <aside class="budget-panel">
+        <div class="budget-top">
+          <div>
+            <span>Daily Budget Burn</span>
+            <b id="burnAmount">$0.0000</b>
+          </div>
+          <div class="budget-cap" id="burnCap">$5.0000 cap</div>
+        </div>
+        <div class="burn" id="burn">
+          <div class="burn-track"><div class="burn-fill" id="burnfill"></div></div>
+          <div class="burn-label">
+            <span id="burnPct">0.0%</span>
+            <span id="cacheEsc">0 cache / 0 escalations</span>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="models" aria-label="Model utilization">
+      <div class="section-title">
+        <b>Local Model Utilization</b>
+        <span id="modelTotal">0 routed requests</span>
+      </div>
+      <div class="model-grid" id="models"></div>
+    </section>
+
+    <section class="feed-wrap" aria-label="Decision ledger">
+      <table>
+        <caption>Decision Feed - most recent first</caption>
+        <thead>
+          <tr>
+            <th>Task</th>
+            <th>Type</th>
+            <th>Model</th>
+            <th>Cost</th>
+            <th>Verify</th>
+          </tr>
+        </thead>
+        <tbody id="feed">
+          <tr><td colspan="5"><div class="empty">Waiting for routing decisions.</div></td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
 </div>
-
-<div class="burn" id="burn">
-  <div class="label"><span>Daily budget burn</span><span id="burnlabel">–</span></div>
-  <div class="bar"><div class="fill" id="burnfill"></div></div>
-</div>
-
-<div class="tiers" id="tiers"></div>
-
-<table>
-  <caption>Decision feed — most recent first</caption>
-  <thead><tr><th>Task</th><th>Type</th><th>Tier</th><th>Cost</th><th>Verify</th></tr></thead>
-  <tbody id="feed"><tr><td colspan="5">No decisions yet — run <code>tokentriage benchmark</code>.</td></tr></tbody>
-</table>
 
 <script>
-const usd = v => '$' + Number(v).toFixed(4);
-const DAILY_CAP = 5.00; // display only; server enforces the real cap
+const DAILY_CAP = 5.00;
+const MODEL_STACK = [
+  {tier:'T0', name:'Nomic Embed', detail:'semantic cache', logo:'NE', accent:'var(--cache)'},
+  {tier:'T1', name:'Qwen 2.5', detail:'3B local', logo:'Q3', accent:'var(--cache)'},
+  {tier:'T2', name:'Qwen 2.5', detail:'7B local', logo:'Q7', accent:'var(--qwen)'},
+  {tier:'T3', name:'Qwen 2.5', detail:'14B local', logo:'Q14', accent:'var(--pro)'},
+];
+
+const el = id => document.getElementById(id);
+const usd = (v, digits = 4) => '$' + Number(v || 0).toFixed(digits);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
+  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+}[c]));
+const fmtTime = ts => ts ? new Date(ts * 1000).toLocaleTimeString([], {
+  hour:'2-digit', minute:'2-digit', second:'2-digit'
+}) : '';
+
+function modelForTier(tier){
+  return MODEL_STACK.find(m => m.tier === tier) || {
+    tier:String(tier || ''),
+    name:'TokenTriage',
+    detail:'routed',
+    logo:'TT',
+    accent:'var(--qwen)',
+  };
+}
+
+function renderModels(util, requests){
+  const total = Math.max(1, Number(requests || 0));
+  const maxCount = Math.max(1, ...MODEL_STACK.map(m => Number((util || {})[m.tier] || 0)));
+  el('modelTotal').textContent = `${Number(requests || 0)} routed requests`;
+  el('models').innerHTML = MODEL_STACK.map(m => {
+    const count = Number((util || {})[m.tier] || 0);
+    const pct = 100 * count / total;
+    const width = 100 * count / maxCount;
+    return `<div class="model-row ${count ? 'is-active' : ''}" style="--accent:${m.accent}">
+      <div class="model-logo">${esc(m.logo)}</div>
+      <div class="model-copy">
+        <b>${esc(m.name)}</b>
+        <span>${esc(m.tier)} · ${esc(m.detail)}</span>
+      </div>
+      <div class="model-count">
+        <div class="model-count-row">
+          <span>${count}</span>
+          <span>${pct.toFixed(1)}%</span>
+        </div>
+        <div class="bar"><div class="bar-fill" style="width:${width.toFixed(1)}%"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderFeed(rows){
+  if(!rows || rows.length === 0){
+    el('feed').innerHTML = '<tr><td colspan="5"><div class="empty">Waiting for routing decisions.</div></td></tr>';
+    return;
+  }
+  el('feed').innerHTML = rows.map(r => {
+    const model = modelForTier(r.chosen_tier);
+    const verdictClass = r.verdict === 'fail' ? 'fail' : r.verdict === 'pass' ? 'pass' : '';
+    const verify = r.verdict || (r.escalated_to ? 'escalated' : 'not sampled');
+    const verifyClass = r.escalated_to && !r.verdict ? 'warn' : verdictClass;
+    const type = r.task_type || '';
+    return `<tr>
+      <td class="task-cell">
+        <div class="task-title">${esc(r.task_preview || '')}</div>
+        <div class="task-meta">${esc(fmtTime(r.ts))}</div>
+      </td>
+      <td><span class="pill">${esc(type)}</span></td>
+      <td>
+        <div class="tier-cell" style="--accent:${model.accent}">
+          <div class="tiny-logo">${esc(model.logo)}</div>
+          <div class="tier-name">
+            <b>${esc(r.chosen_tier || '')}${r.escalated_to ? ' -> ' + esc(r.escalated_to) : ''}</b>
+            <span>${esc(model.detail)}</span>
+          </div>
+        </div>
+      </td>
+      <td>${usd(r.cost_usd, 6)}</td>
+      <td><span class="pill ${verifyClass}">${esc(verify)}</span></td>
+    </tr>`;
+  }).join('');
+}
+
 async function tick(){
   try{
-    const s = await (await fetch('/api/stats')).json();
-    stamp.textContent = new Date().toLocaleTimeString();
-    req.textContent   = s.requests;
-    cost.textContent  = usd(s.cost_usd);
-    base.textContent  = usd(s.baseline_usd);
-    save.textContent  = s.savings_pct + '%';
-    cache.textContent = s.cache_hits;
-    esc.textContent   = s.escalations;
-    const pct = Math.min(100, 100 * s.budget_spent_today / DAILY_CAP);
-    burnfill.style.width = pct + '%';
-    burnlabel.textContent = usd(s.budget_spent_today) + ' / ' + usd(DAILY_CAP);
-    document.getElementById('burn').classList.toggle('hot', pct >= 90);
-    tiers.innerHTML = ['T0','T1','T2','T3'].map(t =>
-      `<div class="tier">${t}<b>${(s.tier_utilization||{})[t]||0}</b></div>`).join('');
-    feed.innerHTML = (s.recent||[]).map(r => `<tr>
-      <td>${(r.task_preview||'').slice(0,60)}</td>
-      <td>${r.task_type||''}</td>
-      <td class="tier-${r.chosen_tier}">${r.chosen_tier}${r.escalated_to?' ↑':''}</td>
-      <td>${usd(r.cost_usd||0)}</td>
-      <td class="${r.verdict==='fail'?'fail':''}">${r.verdict||'—'}</td>
-    </tr>`).join('') || feed.innerHTML;
-  }catch(e){ stamp.textContent = 'gateway offline'; }
+    const res = await fetch('/api/stats');
+    if(!res.ok) throw new Error('stats unavailable');
+    const s = await res.json();
+    el('stamp').textContent = new Date().toLocaleTimeString();
+    el('req').textContent = Number(s.requests || 0);
+    el('cost').textContent = usd(s.cost_usd);
+    el('base').textContent = usd(s.baseline_usd);
+    el('save').textContent = Number(s.savings_pct || 0).toFixed(1) + '%';
+    el('burnAmount').textContent = usd(s.budget_spent_today);
+    el('burnCap').textContent = usd(DAILY_CAP) + ' cap';
+    const burnPct = Math.min(100, 100 * Number(s.budget_spent_today || 0) / DAILY_CAP);
+    el('burnfill').style.width = burnPct.toFixed(2) + '%';
+    el('burnPct').textContent = burnPct.toFixed(2) + '%';
+    el('cacheEsc').textContent = `${Number(s.cache_hits || 0)} cache / ${Number(s.escalations || 0)} escalations`;
+    el('burn').classList.toggle('hot', burnPct >= 90);
+    renderModels(s.tier_utilization || {}, s.requests || 0);
+    renderFeed(s.recent || []);
+  }catch(e){
+    el('stamp').textContent = 'Offline';
+  }
 }
-tick(); setInterval(tick, 2000);
+
+el('refresh').addEventListener('click', tick);
+tick();
+setInterval(tick, 2000);
 </script>
 </body>
 </html>
