@@ -31,3 +31,12 @@ policies:
   security:
     max_input_chars: 20000
     rate_limit_per_minute: 60
+
+  # Context privacy: governs what conversation history is sent to CLOUD tiers.
+  # Local (Ollama) tiers always get full context — it never leaves the machine.
+  privacy:
+    cloud_context: summary   # full | none | last_n | summary
+    context_last_n: 2        # turns of history to keep when cloud_context=last_n
+    # Sensitive-content firewall: prior turns flagged legal/financial/medical are
+    # NEVER included in a cloud request, regardless of cloud_context mode.
+    sensitive_firewall: true

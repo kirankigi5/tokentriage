@@ -84,6 +84,13 @@ _SENSITIVE_TERMS = (
 )
 
 
+def is_sensitive(text: str) -> bool:
+    """True if the text contains a sensitive-domain term. Reused by the context
+    privacy firewall so flagged content is never included in cloud requests."""
+    t = (text or "").lower()
+    return any(k in t for k in _SENSITIVE_TERMS)
+
+
 def _sensitive_backstop(task: str, verdict: TriageVerdict) -> TriageVerdict:
     """Upgrade to legal_or_financial if a sensitive term appears — regardless of
     what the LLM classifier decided. No-op if already classified that way."""
@@ -100,6 +107,49 @@ def _sensitive_backstop(task: str, verdict: TriageVerdict) -> TriageVerdict:
         rationale=f"sensitive-term backstop matched {hit!r}; "
                   f"pinned to top tier (was {verdict.task_type})",
     )
+
+
+# High-confidence keyword -> task_type rules. A deterministic guardrail for the
+# obvious classes a small local classifier sometimes mislabels (e.g. tagging a
+# "classify this ticket" prompt as factual_lookup). Checked most-specific first;
+# only fires on unambiguous phrasing so it can't override correct LLM labels.
+_TAXONOMY_RULES = (
+    ("code_generation", ("write a python", "write python", "write a sql", "sql query",
+                         "function that", "function to", "a decorator", "regular expression")),
+    ("multi_step_reasoning", ("calculate", "compute", "step by step", "break-even",
+                              "breakeven", "growth rate", "walk through",
+                              "show your reasoning", "breakeven analysis")),
+    ("classification", ("classify", "positive or negative", "urgent or not-urgent",
+                        "urgent or not", "tag this", "categorize", "sentiment")),
+    ("summarization", ("summarize", "summarise", "tl;dr", "key point", "in two sentences")),
+)
+
+
+def _taxonomy_hint(task: str) -> str | None:
+    t = task.lower()
+    for label, kws in _TAXONOMY_RULES:
+        if any(k in t for k in kws):
+            return label
+    return None
+
+
+def _backstop(task: str, verdict: TriageVerdict) -> TriageVerdict:
+    """Deterministic guardrails over the LLM label: (1) sensitive domains pin to
+    the top tier; (2) obvious task classes are corrected by keyword. Defense in
+    depth — the small model classifies, deterministic rules catch its blind spots."""
+    pinned = _sensitive_backstop(task, verdict)
+    if pinned.task_type == "legal_or_financial":
+        return pinned
+    hint = _taxonomy_hint(task)
+    if hint and hint != verdict.task_type:
+        harder = hint in ("code_generation", "multi_step_reasoning")
+        return TriageVerdict(
+            complexity_score=max(verdict.complexity_score, 0.6 if harder else verdict.complexity_score),
+            task_type=hint,
+            estimated_output_tokens=verdict.estimated_output_tokens,
+            rationale=f"taxonomy backstop -> {hint} (LLM said {verdict.task_type})",
+        )
+    return verdict
 
 
 def triage(task: str) -> TriageVerdict:
@@ -133,4 +183,4 @@ def triage(task: str) -> TriageVerdict:
         # Fail-safe: if triage is unreadable, assume hard task -> higher tier.
         verdict = TriageVerdict(0.9, "multi_step_reasoning", 500,
                                 "triage_parse_failure_conservative_default")
-    return _sensitive_backstop(task, verdict)
+    return _backstop(task, verdict)

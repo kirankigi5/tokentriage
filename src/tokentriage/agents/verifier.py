@@ -15,6 +15,7 @@ s=0.25 and T2 pricing this stays well under the T3-vs-T1 price gap.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import random
 from dataclasses import dataclass
@@ -51,11 +52,17 @@ except ImportError:
     verifier_agent = None
 
 
-def should_sample(policy: dict, chosen_tier: str) -> bool:
-    """Only cheap-tier answers are sampled; T3 answers are trusted by design."""
+def should_sample(policy: dict, chosen_tier: str, task: str | None = None) -> bool:
+    """Only cheap-tier answers are sampled; T3 answers are trusted by design.
+
+    Sampling is keyed off the task hash (not RNG) so which answers get verified
+    — and therefore which escalate — is reproducible across benchmark runs."""
     if chosen_tier in ("T0", "T3"):
         return False
     rate = float(policy.get("escalation", {}).get("verify_sample_rate", 0.25))
+    if task is not None:
+        h = int(hashlib.md5(task.encode("utf-8")).hexdigest(), 16) % 1000 / 1000.0
+        return h < rate
     return random.random() < rate
 
 

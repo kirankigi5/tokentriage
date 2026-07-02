@@ -1,0 +1,32 @@
+# One-command local stack: TokenTriage gateway + a local Ollama service.
+# The single Dockerfile image is NOT self-contained — it needs Ollama reachable
+# at OLLAMA_HOST. This compose file wires that up.
+#
+#   docker compose up --build
+#   # then pull the models INTO the ollama service (one-time):
+#   docker compose exec ollama ollama pull qwen2.5:3b
+#   docker compose exec ollama ollama pull qwen2.5:7b
+#   docker compose exec ollama ollama pull qwen2.5:14b
+#   docker compose exec ollama ollama pull nomic-embed-text
+#
+# Gateway: http://localhost:8000  ·  playground: /  ·  dashboard: /dashboard
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama      # persist pulled models across restarts
+
+  tokentriage:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434  # point the app at the ollama service
+      - TOKENTRIAGE_HOST=0.0.0.0
+    depends_on:
+      - ollama
+
+volumes:
+  ollama-models:

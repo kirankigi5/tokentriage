@@ -44,7 +44,9 @@ def _ollama_generate(model_id: str, messages: list[dict]) -> tuple[str, int, int
     """Call a local Ollama model with a full message list (multi-turn ready)."""
     r = httpx.post(
         f"{_OLLAMA_HOST}/api/chat",
-        json={"model": model_id, "messages": messages, "stream": False},
+        # temperature 0 -> greedy decoding, so benchmark runs are reproducible.
+        json={"model": model_id, "messages": messages, "stream": False,
+              "options": {"temperature": 0}},
         timeout=_OLLAMA_TIMEOUT,
     )
     r.raise_for_status()

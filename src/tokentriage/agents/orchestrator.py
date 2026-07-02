@@ -45,6 +45,7 @@ class RouteResult:
     verified: bool = False
     verdict: str | None = None
     escalated_to: str | None = None
+    context_note: str | None = None  # how conversation context was shared (cloud)
     trace: list[tuple[str, float]] = field(default_factory=list)  # (state, ts)
 
 
@@ -110,6 +111,50 @@ def _pick_tier(policy: dict, verdict: TriageVerdict) -> tuple[str, str]:
     return candidates[-1], "no tier met floor; selected most capable allowed tier"
 
 
+def _privacy_context(model_tier, task: str, messages: list[dict] | None,
+                     policy: dict) -> tuple[list[dict] | None, str | None]:
+    """Decide what conversation context is sent to the chosen tier.
+
+    Local tiers get the FULL history — it never leaves the machine. For CLOUD
+    tiers, the privacy policy governs what's shared (full/none/last_n/summary),
+    and a sensitive-content firewall strips any prior turn flagged
+    legal/financial/medical so it can never reach a third party.
+    Returns (messages_to_send, human-readable note).
+    """
+    from tokentriage.agents.triage import is_sensitive
+
+    if messages is None:
+        return None, None
+    if model_tier.provider in ("ollama", "cache"):
+        return messages, None  # on-device: full context, nothing leaves
+
+    pol = policy.get("privacy", {})
+    mode = pol.get("cloud_context", "full")
+    current = [{"role": "user", "content": task}]  # sanitized latest turn
+    prior = messages[:-1] if messages and messages[-1].get("role") == "user" else list(messages)
+
+    firewalled = False
+    if pol.get("sensitive_firewall", True):
+        kept = [m for m in prior if not is_sensitive(m.get("content", ""))]
+        firewalled = len(kept) != len(prior)
+        prior = kept
+
+    fw = " +firewall" if firewalled else ""
+    if mode == "none":
+        return current, f"cloud_context=none{fw}"
+    if mode == "last_n":
+        n = int(pol.get("context_last_n", 2))
+        return prior[-(2 * n):] + current, f"cloud_context=last_{n}{fw}"
+    if mode == "summary" and prior:
+        joined = "\n".join(f"{m.get('role')}: {m.get('content', '')}" for m in prior)
+        summary, _, _ = providers.generate(
+            TIERS["T1"],  # summarize LOCALLY so raw prior turns never leave
+            f"Summarize this conversation in 2-3 sentences for context:\n{joined}")
+        ctx = [{"role": "user", "content": f"[Prior context, summarized locally]: {summary}"}]
+        return ctx + current, f"cloud_context=summary (local){fw}"
+    return prior + current, (f"cloud_context=full{fw}" if fw else None)
+
+
 def _dispatch(tier: str, task: str, messages: list[dict] | None = None) -> tuple[str, int, int]:
     """Call the chosen model via the provider layer (Ollama/Gemini/OpenAI).
     Returns (answer, input_tokens, output_tokens) with real backend counts.
@@ -148,21 +193,25 @@ def route(task: str, policy: dict, cache: SemanticCache,
     tier, why = _pick_tier(policy, verdict)
     trace.append(("POLICY_CHECKED", time.time()))
 
-    # --- Dispatch -------------------------------------------------------------
-    answer, itok, otok = _dispatch(tier, task, messages)
+    # --- Dispatch (privacy policy governs cloud context) ------------------
+    send_msgs, cnote = _privacy_context(TIERS[tier], task, messages, policy)
+    answer, itok, otok = _dispatch(tier, task, send_msgs)
     cost = estimate_cost_usd(tier, itok, otok)
     breaker.record(tier, cost)
     baseline = estimate_baseline_usd(itok, otok)  # what all-cloud-frontier would cost
+    if cnote:
+        trace.append((cnote, time.time()))
     trace.append(("DISPATCHED", time.time()))
 
     result = RouteResult(task_id, answer, tier, verdict.task_type,
                          verdict.complexity_score,
-                         f"{verdict.rationale} | {why}", cost, baseline, trace=trace)
+                         f"{verdict.rationale} | {why}", cost, baseline,
+                         context_note=cnote, trace=trace)
 
     # --- Sampled verification + bounded escalation -------------------------
     max_hops = int(policy.get("escalation", {}).get("max_hops", 2))
     hops = 0
-    while should_sample(policy, result.chosen_tier) and hops < max_hops:
+    while should_sample(policy, result.chosen_tier, task) and hops < max_hops:
         result.verified = True
         vr = verify(task, result.answer)
         result.verdict = vr.verdict
@@ -174,13 +223,16 @@ def route(task: str, policy: dict, cache: SemanticCache,
         if up is None:
             break
         # Escalate: re-answer one tier up; costs accumulate honestly.
-        answer, itok, otok = _dispatch(up, task, messages)
+        send_msgs, cnote = _privacy_context(TIERS[up], task, messages, policy)
+        answer, itok, otok = _dispatch(up, task, send_msgs)
         ecost = estimate_cost_usd(up, itok, otok)
         breaker.record(up, ecost)
         result.answer = answer
         result.cost_usd += ecost
         result.escalated_to = up
         result.chosen_tier = up
+        if cnote:
+            result.context_note = cnote
         hops += 1
         trace.append((f"ESCALATED_{up}", time.time()))
 

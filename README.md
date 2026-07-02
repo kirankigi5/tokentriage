@@ -82,7 +82,7 @@ yardstick. See `docs/architecture.md` for full design rationale.
 | MCP Server | `src/tokentriage/mcp_server/server.py` — custom pricing/benchmark/budget/log tools |
 | Security features | `src/tokentriage/security/` — gateway, injection screen, budget circuit breaker, key isolation, sensitive-task backstop |
 | Deployability | OpenAI-compatible proxy (`proxy/app.py`), Dockerfile |
-| Agent skills (CLI) | `src/tokentriage/cli.py` — serve / benchmark / report / tune / adk-demo / attack-test |
+| Agent skills (CLI) | `src/tokentriage/cli.py` — serve / benchmark / eval / report / tune / adk-demo / attack-test |
 | Antigravity | Built in the Antigravity IDE (see video) |
 
 **ADK note:** routing/cost/escalation is deterministic *by design* — you don't
@@ -93,8 +93,11 @@ adk-demo "<task>"` shows them executing.
 ## Quickstart (fully local, no API keys)
 
 ```bash
-# 1. Install Ollama (https://ollama.com) and pull the model tiers
-ollama pull qwen2.5:3b qwen2.5:7b qwen2.5:14b nomic-embed-text
+# 1. Install Ollama (https://ollama.com) and pull the model tiers (one each)
+ollama pull qwen2.5:3b
+ollama pull qwen2.5:7b
+ollama pull qwen2.5:14b
+ollama pull nomic-embed-text
 
 # 2. Install TokenTriage (Python 3.11+)
 pip install -e .
@@ -112,6 +115,14 @@ tokentriage serve            # http://localhost:8000  ·  /dashboard
 # 6. Run the benchmark suite vs the all-cloud baseline
 tokentriage benchmark
 tokentriage report
+```
+
+**Deploy with Docker:** the app image is *not* self-contained — it needs Ollama
+reachable at `OLLAMA_HOST`. Use the bundled compose stack:
+
+```bash
+docker compose up --build
+docker compose exec ollama ollama pull qwen2.5:3b     # + 7b, 14b, nomic-embed-text
 ```
 
 To add a cloud tier later: edit a tier in `src/tokentriage/models/registry.py`
@@ -132,6 +143,11 @@ accuracy floor, latency SLO, daily budget, per-task-type tier overrides
 - Input sanitizer + prompt-injection screen quarantine suspicious requests
   (see `tokentriage attack-test`).
 - Budget circuit breaker halts expensive-tier routing at the daily cap.
+- **Context privacy** (`policy.yaml` → `privacy`): local tiers always get full
+  conversation context (it never leaves the machine); for cloud tiers, history
+  is governed by `cloud_context` (`full`/`none`/`last_n`/`summary`, where
+  `summary` is produced *locally*). A **sensitive-content firewall** strips any
+  legal/financial/medical prior turn so it can never reach a third-party API.
 
 ## Repository layout
 

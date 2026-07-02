@@ -87,6 +87,7 @@ async def chat_completions(request: Request):
             "verified": result.verified,
             "verdict": result.verdict,
             "escalated_to": result.escalated_to,
+            "context_note": result.context_note,
             "trace": [{"state": s, "ts": ts} for s, ts in result.trace],
         },
     }

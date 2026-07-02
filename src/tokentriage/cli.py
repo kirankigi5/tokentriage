@@ -60,6 +60,31 @@ def benchmark(queries: Path = Path("benchmarks/test_queries.jsonl")):
 
 
 @app.command()
+def eval(queries: Path = Path("benchmarks/test_queries.jsonl")):
+    """Taxonomy accuracy harness: run triage on each labelled query and compare
+    the predicted task_type to the expected one. Proves routing quality, not just
+    cost — the table judges want to see next to the savings number."""
+    from tokentriage.agents.triage import triage
+
+    rows = [json.loads(l) for l in queries.read_text().splitlines() if l.strip()]
+    labelled = [r for r in rows if r.get("expect_type")]
+    correct, misses = 0, []
+    typer.echo(f"{'exp':<22} {'pred':<22} task")
+    for r in labelled:
+        v = triage(r["task"])
+        ok = v.task_type == r["expect_type"]
+        correct += ok
+        mark = "" if ok else "  <-- MISS"
+        if not ok:
+            misses.append(r)
+        typer.echo(f"{r['expect_type']:<22} {v.task_type:<22} {r['task'][:40]}{mark}")
+    n = len(labelled)
+    typer.echo("-" * 70)
+    typer.echo(f"Taxonomy accuracy: {correct}/{n} = {100*correct/n:.1f}%  "
+               f"({len(misses)} misses)")
+
+
+@app.command()
 def report(window_hours: float = 24.0):
     """Print aggregate stats (same data the dashboard shows)."""
     db.init_db()
