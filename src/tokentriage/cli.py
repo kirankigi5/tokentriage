@@ -6,6 +6,8 @@
   tokentriage tune          recompute routing thresholds from verifier feedback
   tokentriage policy-check  validate config/policy.yaml
   tokentriage attack-test   fire canned prompt-injections at the security gateway
+  tokentriage evidence      generate judge-facing benchmark artifacts
+  tokentriage demo          seed curated demo traffic for the dashboard
 """
 from __future__ import annotations
 
@@ -90,6 +92,27 @@ def report(window_hours: float = 24.0):
     db.init_db()
     s = db.stats(window_hours)
     typer.echo(json.dumps(s, indent=2, default=str))
+
+
+@app.command()
+def evidence(queries: Path = Path("benchmarks/test_queries.jsonl"),
+             out: Path = Path("reports")):
+    """Generate the evidence bundle: report.md, metrics.json, CSV, dashboard."""
+    from tokentriage.evidence import run_evidence
+
+    run_dir = run_evidence(queries, out)
+    typer.echo(f"Evidence written to {run_dir}")
+    typer.echo(f"Latest dashboard: {out / 'latest' / 'dashboard.html'}")
+
+
+@app.command()
+def demo():
+    """Seed a short judge scenario set so /dashboard has an immediate story."""
+    from tokentriage.evidence import seed_demo_traffic
+
+    metrics = seed_demo_traffic()
+    typer.echo(json.dumps(metrics, indent=2))
+    typer.echo("Open http://localhost:8000/dashboard after `tokentriage serve`.")
 
 
 @app.command()

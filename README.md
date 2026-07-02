@@ -1,25 +1,65 @@
-# TokenTriage — Inference Cost Engine
+# TokenTriage — Agent FinOps Control Plane
 
-> Route every task to the cheapest model that can still answer it correctly —
-> and run the cheap tiers on **free local open-source models**.
+> Route every AI-agent task to the cheapest sufficient model, prove the
+> savings, and enforce production cost/security policy.
 
-TokenTriage is a cost-aware routing layer for LLM-powered applications. It sits
-in front of any agent pipeline as an OpenAI-compatible proxy, triages each
-incoming task with a lightweight classifier agent, and dispatches it to the
-cheapest model tier whose measured accuracy for that task type clears a
-configurable floor. A verifier agent samples cheap-tier answers and escalates
-failures, and a feedback store adapts routing thresholds over time — so the
-system doesn't just route cheap, it catches its own mistakes and improves with
-use.
+TokenTriage is an OpenAI + Gemini-compatible routing gateway for LLM-powered
+agents. It triages each task, checks cache/policy/budget, dispatches to the
+cheapest sufficient tier, verifies sampled cheap-tier answers, and records a
+cost receipt against an always-frontier Gemini baseline.
 
-The tiers are **hybrid**: cheap tasks run on local open-source models (Ollama)
-for ~$0, and only genuinely hard tasks need a bigger model. Savings are measured
-against the real business alternative — **sending every task to a frontier cloud
-model**.
+The cheap tiers run on local open-source Ollama models by default, so the
+judge demo works with no cloud keys. Gemini can also be used as an optional
+backend tier, and Gemini-style clients can call TokenTriage through
+`/v1beta/models/{model}:generateContent`.
 
 **Capstone:** Kaggle × Google — AI Agents: Intensive Vibe Coding (Track: Agents for Business)
 
 ---
+
+## The killer metric: 98.1% lower inference cost
+
+Real run: 30-query business workload, all tiers on local open-source models
+(Apple M4), measured against sending every task to `gemini-2.5-pro`.
+
+| Metric | Always-frontier | TokenTriage | Improvement |
+|---|---:|---:|---:|
+| Modeled cost | $0.08892 | **$0.00172** | **98.1% lower** |
+| Cache hits | 0 | 3 / 30 | free reuse |
+| Verification escalations | n/a | 1 | quality protected |
+| Cloud keys required | yes | no | local-first demo |
+
+Generate fresh evidence:
+
+```bash
+tokentriage evidence
+open reports/latest/dashboard.html
+```
+
+## Judge demo
+
+The primary demo UI is a Chainlit app inspired by last year's VeganFlow winner:
+each request shows visible agent/tool steps instead of hiding the routing
+pipeline.
+
+```bash
+chainlit run demo_chainlit.py
+```
+
+The FastAPI gateway and ledger still run as production infrastructure:
+
+```bash
+tokentriage serve            # http://localhost:8000/dashboard
+tokentriage demo             # seed curated dashboard traffic
+```
+
+Evidence and writeups:
+
+- `reports/latest/dashboard.html` — offline interactive evidence dashboard
+- `docs/CAPSTONE_NARRATIVE.md` — business story and judge pitch
+- `docs/SCIENTIFIC_REPORT.md` — benchmark methodology and results
+- `docs/SOFTWARE_QUALITY.md` — security, privacy, and architecture audit
+- `docs/DEMO_SCRIPT.md` — 3-minute walkthrough
 
 ## The problem
 
@@ -81,8 +121,9 @@ yardstick. See `docs/architecture.md` for full design rationale.
 | Multi-agent system (Google ADK) | Triage + Verifier are ADK `LlmAgent`s running on local Ollama via LiteLLM (`TOKENTRIAGE_USE_ADK=1`; see `tokentriage adk-demo`), coordinated by a deterministic orchestrator |
 | MCP Server | `src/tokentriage/mcp_server/server.py` — custom pricing/benchmark/budget/log tools |
 | Security features | `src/tokentriage/security/` — gateway, injection screen, budget circuit breaker, key isolation, sensitive-task backstop |
-| Deployability | OpenAI-compatible proxy (`proxy/app.py`), Dockerfile |
-| Agent skills (CLI) | `src/tokentriage/cli.py` — serve / benchmark / eval / report / tune / adk-demo / attack-test |
+| API compatibility | OpenAI `/v1/chat/completions` + Gemini `/v1beta/models/{model}:generateContent` |
+| Deployability | FastAPI gateway (`proxy/app.py`), Dockerfile, Chainlit judge UI |
+| Agent skills (CLI) | `src/tokentriage/cli.py` — serve / benchmark / eval / report / evidence / demo / tune / adk-demo / attack-test |
 | Antigravity | Built in the Antigravity IDE (see video) |
 
 **ADK note:** routing/cost/escalation is deterministic *by design* — you don't
@@ -99,7 +140,7 @@ ollama pull qwen2.5:7b
 ollama pull qwen2.5:14b
 ollama pull nomic-embed-text
 
-# 2. Install TokenTriage (Python 3.11+)
+# 2. Install TokenTriage (Python 3.11-3.13; Chainlit is not yet reliable on 3.14)
 pip install -e .
 
 # 3. (optional) configure — defaults already run fully local
@@ -108,13 +149,17 @@ cp .env.example .env
 # 4. Run the gateway + dashboard
 tokentriage serve            # http://localhost:8000  ·  /dashboard
 
+# 4b. Or run the judge-facing Chainlit demo
+chainlit run demo_chainlit.py
+
 # 5. Point any OpenAI-compatible client at it
 #    base_url="http://localhost:8000/v1"   (the `model` field is ignored —
 #    TokenTriage picks the tier)
 
-# 6. Run the benchmark suite vs the all-cloud baseline
+# 6. Run the evidence suite vs the all-cloud baseline
 tokentriage benchmark
 tokentriage report
+tokentriage evidence
 ```
 
 **Deploy with Docker:** the app image is *not* self-contained — it needs Ollama
@@ -125,10 +170,10 @@ docker compose up --build
 docker compose exec ollama ollama pull qwen2.5:3b     # + 7b, 14b, nomic-embed-text
 ```
 
-To add a cloud tier later: edit a tier in `src/tokentriage/models/registry.py`
-(set `provider="gemini"`, a model id, and its price), then put a key in `.env`
-(`GEMINI_API_KEY=...`). One shared key powers any cloud tier; per-tier vars
-override it for key isolation.
+To add a Gemini cloud tier later: edit a tier in
+`src/tokentriage/models/registry.py` (set `provider="gemini"`, a model id, and
+its price), then put a key in `.env` (`GEMINI_API_KEY=...`). One shared key
+powers any cloud tier; per-tier vars override it for key isolation.
 
 ## Configuration
 

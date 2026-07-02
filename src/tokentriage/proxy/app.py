@@ -63,14 +63,47 @@ def _tt_meta(result) -> dict:
     }
 
 
+def _messages_from_gemini(body: dict) -> list[dict]:
+    """Translate Gemini generateContent input into our internal chat shape."""
+    messages: list[dict] = []
+    system = body.get("systemInstruction")
+    if system:
+        text = _parts_text(system.get("parts", []))
+        if text:
+            messages.append({"role": "system", "content": text})
+    for item in body.get("contents", []):
+        role = "assistant" if item.get("role") == "model" else "user"
+        text = _parts_text(item.get("parts", []))
+        if text:
+            messages.append({"role": role, "content": text})
+    return messages
+
+
+def _parts_text(parts: list[dict]) -> str:
+    return "\n".join(str(p.get("text", "")) for p in parts if p.get("text"))
+
+
+def _latest_user_turn(messages: list[dict]) -> str:
+    user_turns = [m.get("content", "") for m in messages if m.get("role") == "user"]
+    return user_turns[-1] if user_turns else ""
+
+
+def _sanitize_latest_user(messages: list[dict], task: str) -> list[dict]:
+    sent = [dict(m) for m in messages]
+    for m in reversed(sent):
+        if m.get("role") == "user":
+            m["content"] = task
+            break
+    return sent
+
+
 @app.post("/v1/route/stream")
 async def route_stream(request: Request):
     """Server-Sent Events: stream each routing-pipeline stage live as it runs,
     so the UI can show what's happening under the hood in real time."""
     body = await request.json()
     messages = body.get("messages", [])
-    user_turns = [m.get("content", "") for m in messages if m.get("role") == "user"]
-    task = user_turns[-1] if user_turns else ""
+    task = _latest_user_turn(messages)
     client_key = request.headers.get("authorization", "anonymous")
 
     q: queue.Queue = queue.Queue()
@@ -78,11 +111,7 @@ async def route_stream(request: Request):
     def worker():
         try:
             clean = gateway_check(task, client_key, _policy, _limiter)
-            sent = [dict(m) for m in messages]
-            for m in reversed(sent):
-                if m.get("role") == "user":
-                    m["content"] = clean
-                    break
+            sent = _sanitize_latest_user(messages, clean)
             result = route(clean, _policy, _cache, messages=sent or None,
                            on_event=lambda stage, detail: q.put({"stage": stage, **detail}))
             q.put({"stage": "RESULT", "answer": result.answer,
@@ -113,19 +142,14 @@ async def chat_completions(request: Request):
     TokenTriage decides the model; that's the whole point."""
     body = await request.json()
     messages = body.get("messages", [])
-    user_turns = [m.get("content", "") for m in messages if m.get("role") == "user"]
-    task = user_turns[-1] if user_turns else ""   # route on the LATEST user turn
+    task = _latest_user_turn(messages)   # route on the LATEST user turn
     client_key = request.headers.get("authorization", "anonymous")
 
     try:
         task = gateway_check(task, client_key, _policy, _limiter)   # security first
         # Send the full conversation to the model for context, but reflect the
         # sanitized latest turn back in so the model never sees the raw input.
-        sent = [dict(m) for m in messages]
-        for m in reversed(sent):
-            if m.get("role") == "user":
-                m["content"] = task
-                break
+        sent = _sanitize_latest_user(messages, task)
         result = route(task, _policy, _cache, messages=sent or None)
     except SecurityError as e:
         return JSONResponse(status_code=e.status,
@@ -144,6 +168,43 @@ async def chat_completions(request: Request):
             "finish_reason": "stop",
         }],
         "tokentriage": _tt_meta(result),
+    }
+
+
+@app.post("/v1beta/models/{model}:generateContent")
+async def gemini_generate_content(model: str, request: Request):
+    """Gemini-compatible ingress. The requested model is advisory: TokenTriage
+    still selects the cheapest sufficient tier and returns Gemini-shaped output."""
+    body = await request.json()
+    messages = _messages_from_gemini(body)
+    task = _latest_user_turn(messages)
+    client_key = request.headers.get("x-goog-api-key") or request.headers.get(
+        "authorization", "anonymous")
+
+    try:
+        task = gateway_check(task, client_key, _policy, _limiter)
+        sent = _sanitize_latest_user(messages, task)
+        result = route(task, _policy, _cache, messages=sent or None)
+    except SecurityError as e:
+        return JSONResponse(
+            status_code=e.status,
+            content={"error": {"code": e.status, "message": e.reason,
+                               "status": "INVALID_ARGUMENT"}},
+        )
+
+    meta = _tt_meta(result)
+    return {
+        "candidates": [{
+            "content": {
+                "role": "model",
+                "parts": [{"text": result.answer}],
+            },
+            "finishReason": "STOP",
+            "index": 0,
+        }],
+        "modelVersion": f"tokentriage:{result.chosen_tier}:{meta['model_id']}",
+        "responseId": f"tt-{uuid.uuid4().hex[:12]}",
+        "tokentriage": meta,
     }
 
 
