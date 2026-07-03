@@ -98,7 +98,7 @@ open http://localhost:8000/architecture
 ```
 
 ```mermaid
-flowchart LR
+flowchart TD
     Client["Client apps<br/>OpenAI + Gemini compatible"]
     Gateway["FastAPI Gateway<br/>/v1 + /v1beta + streaming"]
     Security["Security Gateway<br/>sanitize · rate-limit · quarantine"]
