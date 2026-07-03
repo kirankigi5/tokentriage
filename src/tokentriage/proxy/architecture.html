@@ -51,7 +51,7 @@
   }
   a{color:inherit}
   .shell{
-    width:min(1280px,100%);
+    width:min(1580px,100%);
     min-height:calc(100vh - 28px);
     margin:0 auto;
     display:grid;
@@ -156,7 +156,7 @@
   }
   .hero{
     display:grid;
-    grid-template-columns:minmax(0,1.15fr) minmax(260px,.85fr);
+    grid-template-columns:minmax(0,1fr) minmax(360px,.58fr);
     gap:12px;
   }
   .hero-card,
@@ -171,7 +171,7 @@
     box-shadow:var(--shadow);
   }
   .hero-card{
-    min-height:190px;
+    min-height:160px;
     display:grid;
     align-content:center;
     gap:14px;
@@ -186,7 +186,7 @@
     text-transform:uppercase;
   }
   .hero-card h2{
-    max-width:760px;
+    max-width:820px;
     margin:0;
     font-size:clamp(30px,4vw,54px);
     line-height:.98;
@@ -226,7 +226,7 @@
   .architecture-shell{
     min-height:0;
     display:grid;
-    grid-template-columns:minmax(0,1fr) 330px;
+    grid-template-columns:minmax(860px,1fr) 330px;
     gap:12px;
   }
   .canvas{
@@ -256,7 +256,7 @@
   }
   .flow-map{
     position:relative;
-    min-height:560px;
+    min-height:640px;
     border:1px solid var(--rule);
     border-radius:10px;
     background:
@@ -275,14 +275,15 @@
   .links path{
     fill:none;
     stroke:color-mix(in srgb, var(--rule) 82%, var(--ink));
-    stroke-width:2;
-    stroke-dasharray:7 7;
+    stroke-width:1.35;
+    stroke-dasharray:6 8;
+    vector-effect:non-scaling-stroke;
   }
   .links path.hot{
     stroke:var(--cache);
-    stroke-width:3;
+    stroke-width:2.1;
     stroke-dasharray:0;
-    filter:drop-shadow(0 0 4px color-mix(in srgb, var(--cache) 55%, transparent));
+    filter:drop-shadow(0 0 2px color-mix(in srgb, var(--cache) 38%, transparent));
   }
   .packet{
     position:absolute;
@@ -297,27 +298,19 @@
     transform:translate(-50%,-50%);
   }
   .packet.run{
-    animation:packet 2.7s linear infinite;
-  }
-  @keyframes packet{
-    0%,100%{opacity:0;transform:translate(-50%,-50%) scale(.7)}
-    8%,88%{opacity:1}
-    20%{left:27%;top:12%}
-    40%{left:50%;top:25%}
-    60%{left:50%;top:48%}
-    80%{left:73%;top:64%}
+    opacity:1;
   }
   .node{
     position:absolute;
     left:var(--x);
     top:var(--y);
-    width:170px;
-    min-height:72px;
+    width:150px;
+    min-height:62px;
     display:grid;
-    grid-template-columns:34px minmax(0,1fr);
+    grid-template-columns:30px minmax(0,1fr);
     align-items:center;
-    gap:9px;
-    padding:10px;
+    gap:8px;
+    padding:8px;
     border:1px solid var(--rule);
     border-radius:10px;
     background:color-mix(in srgb, var(--panel) 94%, transparent);
@@ -336,8 +329,8 @@
     box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent), 0 12px 30px rgba(0,0,0,.1);
   }
   .node-logo{
-    width:34px;
-    height:34px;
+    width:30px;
+    height:30px;
     display:grid;
     place-items:center;
     border-radius:8px;
@@ -360,8 +353,8 @@
     text-overflow:ellipsis;
     white-space:nowrap;
   }
-  .node-copy b{font-size:13px}
-  .node-copy span{margin-top:3px;color:var(--muted);font:800 10px/1.2 var(--mono)}
+  .node-copy b{font-size:12px}
+  .node-copy span{margin-top:3px;color:var(--muted);font:800 9px/1.2 var(--mono)}
   .stage-grid{
     display:grid;
     grid-template-columns:repeat(4,minmax(0,1fr));
@@ -541,6 +534,20 @@
     .side{grid-template-columns:1fr 1fr;grid-template-rows:auto}
     .timeline{grid-column:1/-1;max-height:260px}
   }
+  @media (min-width:1041px) and (max-width:1450px){
+    .node{
+      width:136px;
+      grid-template-columns:28px minmax(0,1fr);
+      gap:7px;
+      padding:7px;
+    }
+    .node-logo{
+      width:28px;
+      height:28px;
+    }
+    .node-copy b{font-size:11px}
+    .node-copy span{font-size:8px}
+  }
   @media (max-width:720px){
     body{padding:12px}
     .hero{grid-template-columns:1fr}
@@ -624,48 +631,48 @@
           </div>
           <div class="flow-map" id="flowMap">
             <svg class="links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-              <path data-link="client-gateway" d="M14 10 C19 10 20 12 25 12"></path>
-              <path data-link="gateway-security" d="M35 12 C42 12 43 25 50 25"></path>
-              <path data-link="security-cache" d="M50 30 C50 36 50 41 50 47"></path>
-              <path data-link="cache-triage" d="M55 50 C63 50 64 25 72 25"></path>
-              <path data-link="triage-mcp" d="M72 30 C66 41 34 41 28 52"></path>
-              <path data-link="triage-policy" d="M77 30 C82 38 82 49 78 56"></path>
-              <path data-link="policy-models" d="M73 60 C66 63 61 64 55 64"></path>
-              <path data-link="models-verifier" d="M50 68 C50 74 50 79 50 85"></path>
-              <path data-link="models-dashboard" d="M55 64 C68 64 72 88 84 88"></path>
-              <path data-link="verifier-dashboard" d="M55 88 C65 91 72 91 78 88"></path>
-              <path data-link="cache-dashboard" d="M50 53 C57 82 70 88 78 88"></path>
+              <path data-link="client-gateway" d="M22 12 H34"></path>
+              <path data-link="gateway-security" d="M45 12 H58"></path>
+              <path data-link="security-cache" d="M66 17 V30 H34 V36"></path>
+              <path data-link="cache-triage" d="M42 38 H58"></path>
+              <path data-link="triage-mcp" d="M66 44 V54 H28 V60"></path>
+              <path data-link="mcp-policy" d="M28 66 H66 V60"></path>
+              <path data-link="policy-models" d="M66 66 H43 V74"></path>
+              <path data-link="models-verifier" d="M43 80 H66"></path>
+              <path data-link="models-dashboard" d="M43 80 H89"></path>
+              <path data-link="verifier-dashboard" d="M66 80 H89"></path>
+              <path data-link="cache-dashboard" d="M34 44 V92 H89 V80"></path>
             </svg>
             <div class="packet" id="packet" style="--x:12%;--y:10%"></div>
-            <button class="node" data-id="client" style="--x:13%;--y:10%;--accent:var(--qwen)">
-              <div class="node-logo">API</div><div class="node-copy"><b>Client Apps</b><span>OpenAI / Gemini compatible</span></div>
+            <button class="node" data-id="client" style="--x:14%;--y:12%;--accent:var(--qwen)">
+              <div class="node-logo">API</div><div class="node-copy"><b>Clients</b><span>OpenAI + Gemini</span></div>
             </button>
-            <button class="node" data-id="gateway" style="--x:30%;--y:12%;--accent:var(--qwen)">
-              <div class="node-logo"><img src="/imgs/logos/app_logo.png" alt=""></div><div class="node-copy"><b>FastAPI Gateway</b><span>streaming + receipts</span></div>
+            <button class="node" data-id="gateway" style="--x:40%;--y:12%;--accent:var(--qwen)">
+              <div class="node-logo"><img src="/imgs/logos/app_logo.png" alt=""></div><div class="node-copy"><b>Gateway</b><span>stream + receipt</span></div>
             </button>
-            <button class="node" data-id="security" style="--x:50%;--y:25%;--accent:var(--pro)">
-              <div class="node-logo">SG</div><div class="node-copy"><b>Security Gateway</b><span>sanitize, rate-limit, quarantine</span></div>
+            <button class="node" data-id="security" style="--x:66%;--y:12%;--accent:var(--pro)">
+              <div class="node-logo">SG</div><div class="node-copy"><b>Security</b><span>sanitize + block</span></div>
             </button>
-            <button class="node" data-id="cache" style="--x:50%;--y:50%;--accent:var(--cache)">
-              <div class="node-logo"><img src="/imgs/logos/nomic.png" alt=""></div><div class="node-copy"><b>Semantic Cache</b><span>T0 · no model call</span></div>
+            <button class="node" data-id="cache" style="--x:34%;--y:39%;--accent:var(--cache)">
+              <div class="node-logo"><img src="/imgs/logos/nomic.png" alt=""></div><div class="node-copy"><b>Cache T0</b><span>$0 hit path</span></div>
             </button>
-            <button class="node" data-id="triage" style="--x:73%;--y:25%;--accent:var(--qwen)">
-              <div class="node-logo"><img src="/imgs/logos/qwen.png" alt=""></div><div class="node-copy"><b>Triage Agent</b><span>taxonomy + complexity</span></div>
+            <button class="node" data-id="triage" style="--x:66%;--y:39%;--accent:var(--qwen)">
+              <div class="node-logo"><img src="/imgs/logos/qwen.png" alt=""></div><div class="node-copy"><b>Triage</b><span>type + complexity</span></div>
             </button>
-            <button class="node" data-id="mcp" style="--x:27%;--y:55%;--accent:var(--qwen)">
-              <div class="node-logo">MCP</div><div class="node-copy"><b>Pricing MCP</b><span>benchmarks, budgets, logs</span></div>
+            <button class="node" data-id="mcp" style="--x:28%;--y:63%;--accent:var(--qwen)">
+              <div class="node-logo">MCP</div><div class="node-copy"><b>Pricing MCP</b><span>prices + budget</span></div>
             </button>
-            <button class="node" data-id="policy" style="--x:78%;--y:58%;--accent:var(--verify)">
-              <div class="node-logo">YAML</div><div class="node-copy"><b>Policy Engine</b><span>floors, caps, overrides</span></div>
+            <button class="node" data-id="policy" style="--x:66%;--y:63%;--accent:var(--verify)">
+              <div class="node-logo">YAML</div><div class="node-copy"><b>Policy</b><span>floors + caps</span></div>
             </button>
-            <button class="node" data-id="models" style="--x:50%;--y:65%;--accent:var(--cache)">
-              <div class="node-logo"><img src="/imgs/logos/qwen.png" alt=""></div><div class="node-copy"><b>Model Pool</b><span>Qwen tiers via Ollama</span></div>
+            <button class="node" data-id="models" style="--x:43%;--y:78%;--accent:var(--cache)">
+              <div class="node-logo"><img src="/imgs/logos/qwen.png" alt=""></div><div class="node-copy"><b>Models</b><span>Qwen local tiers</span></div>
             </button>
-            <button class="node" data-id="verifier" style="--x:50%;--y:88%;--accent:var(--verify)">
-              <div class="node-logo">V</div><div class="node-copy"><b>Verifier Agent</b><span>sample, judge, escalate</span></div>
+            <button class="node" data-id="verifier" style="--x:66%;--y:78%;--accent:var(--verify)">
+              <div class="node-logo">V</div><div class="node-copy"><b>Verifier</b><span>sample + escalate</span></div>
             </button>
-            <button class="node" data-id="dashboard" style="--x:84%;--y:88%;--accent:var(--cache)">
-              <div class="node-logo">UI</div><div class="node-copy"><b>Dashboard</b><span>spend, cache, decisions</span></div>
+            <button class="node" data-id="dashboard" style="--x:89%;--y:78%;--accent:var(--cache)">
+              <div class="node-logo">UI</div><div class="node-copy"><b>Dashboard</b><span>receipt + savings</span></div>
             </button>
           </div>
         </section>
@@ -765,12 +772,13 @@ const SCENARIOS = [
     meta:'T1 saves 99%+',
     status:'T1 selected after policy check',
     nodes:['client','gateway','security','cache','triage','mcp','policy','models','dashboard'],
-    links:['client-gateway','gateway-security','security-cache','cache-triage','triage-mcp','triage-policy','policy-models','models-dashboard'],
+    links:['client-gateway','gateway-security','security-cache','cache-triage','triage-mcp','mcp-policy','policy-models','models-dashboard'],
     steps:[
       ['Security Gateway','input checked and sanitized','var(--pro)'],
       ['Semantic Cache','miss, continue routing','var(--cache)'],
       ['Triage Agent','simple factual lookup','var(--qwen)'],
-      ['MCP + Policy','T1 meets accuracy floor','var(--verify)'],
+      ['Pricing MCP','returns prices, benchmarks, and budget','var(--qwen)'],
+      ['Policy Engine','T1 meets accuracy floor','var(--verify)'],
       ['Model Dispatch','Qwen 3B answers locally','var(--cache)'],
       ['Savings Receipt','cost compared to Gemini frontier baseline','var(--cache)']
     ]
@@ -795,9 +803,10 @@ const SCENARIOS = [
     meta:'policy protects quality',
     status:'minimum tier and verifier engaged',
     nodes:['client','gateway','security','cache','triage','mcp','policy','models','verifier','dashboard'],
-    links:['client-gateway','gateway-security','security-cache','cache-triage','triage-mcp','triage-policy','policy-models','models-verifier','verifier-dashboard'],
+    links:['client-gateway','gateway-security','security-cache','cache-triage','triage-mcp','mcp-policy','policy-models','models-verifier','verifier-dashboard'],
     steps:[
       ['Triage Agent','legal or financial task detected','var(--qwen)'],
+      ['Pricing MCP','checks benchmarks and budget','var(--qwen)'],
       ['Policy Engine','min_tier override applies','var(--verify)'],
       ['Model Pool','routes to stronger local tier','var(--pro)'],
       ['Verifier Agent','samples answer for quality','var(--verify)'],
@@ -828,6 +837,7 @@ const timelineTitle = document.getElementById('timelineTitle');
 const flowStatus = document.getElementById('flowStatus');
 const packet = document.getElementById('packet');
 const scenarioBox = document.getElementById('scenarios');
+let packetFrame = null;
 
 function renderDetail(id){
   const c = COMPONENTS[id] || COMPONENTS.gateway;
@@ -851,6 +861,43 @@ function renderScenarioButtons(){
   });
 }
 
+function animatePacket(linkIds){
+  if(packetFrame) cancelAnimationFrame(packetFrame);
+  const paths = linkIds
+    .map(id => document.querySelector(`.links path[data-link="${id}"]`))
+    .filter(Boolean)
+    .map(path => ({path, length: path.getTotalLength()}))
+    .filter(item => item.length > 0);
+
+  if(!paths.length){
+    packet.classList.remove('run');
+    return;
+  }
+
+  const totalLength = paths.reduce((sum, item) => sum + item.length, 0);
+  const cycleMs = Math.max(2400, totalLength * 42);
+  const start = performance.now();
+  packet.classList.add('run');
+
+  const frame = now => {
+    let distance = ((now - start) % cycleMs) / cycleMs * totalLength;
+    let current = paths[paths.length - 1];
+    for(const item of paths){
+      if(distance <= item.length){
+        current = item;
+        break;
+      }
+      distance -= item.length;
+    }
+    const point = current.path.getPointAtLength(Math.max(0, Math.min(distance, current.length)));
+    packet.style.left = `${point.x}%`;
+    packet.style.top = `${point.y}%`;
+    packetFrame = requestAnimationFrame(frame);
+  };
+
+  packetFrame = requestAnimationFrame(frame);
+}
+
 function runScenario(id){
   const scenario = SCENARIOS.find(s => s.id === id) || SCENARIOS[0];
   flowStatus.textContent = scenario.status;
@@ -863,9 +910,7 @@ function runScenario(id){
       <div class="step-dot"></div>
       <div class="step-copy"><b>${esc(name)}</b><span>${esc(detail)}</span></div>
     </div>`).join('');
-  packet.classList.remove('run');
-  void packet.offsetWidth;
-  packet.classList.add('run');
+  animatePacket(scenario.links);
 }
 
 document.querySelectorAll('.node').forEach(node => {

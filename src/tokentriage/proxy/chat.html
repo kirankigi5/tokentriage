@@ -61,12 +61,12 @@
   }
   a{color:inherit}
   .shell{
-    width:min(1280px,100%);
+    width:min(1540px,100%);
     height:calc(100dvh - 28px);
     min-height:0;
     margin:0 auto;
     display:grid;
-    grid-template-columns:236px minmax(0,1fr) 260px;
+    grid-template-columns:236px minmax(0,1fr) 220px 260px;
     gap:12px;
   }
   .sidebar{
@@ -294,6 +294,128 @@
     background:var(--panel);
     overflow:hidden;
     box-shadow:none;
+  }
+  .runtime-panel{
+    min-height:0;
+    display:grid;
+    grid-template-rows:auto 1fr;
+    border:1px solid var(--rule);
+    border-radius:12px;
+    background:var(--panel);
+    overflow:hidden;
+    box-shadow:none;
+  }
+  .runtime-head{
+    min-height:42px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:0 12px;
+    border-bottom:1px solid var(--rule);
+  }
+  .runtime-head b{
+    font:900 12px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .runtime-head span{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:var(--muted);
+    font:800 10px/1 var(--mono);
+  }
+  .runtime-body{
+    min-height:0;
+    overflow:auto;
+    padding:12px;
+  }
+  .runtime-flow{
+    display:grid;
+    gap:0;
+  }
+  .runtime-node{
+    position:relative;
+    display:grid;
+    grid-template-columns:28px minmax(0,1fr);
+    gap:8px;
+    min-height:54px;
+  }
+  .runtime-node:not(:last-child)::before{
+    content:"";
+    position:absolute;
+    left:13px;
+    top:28px;
+    bottom:0;
+    border-left:1px dashed var(--rule);
+  }
+  .runtime-node.is-done:not(:last-child)::before,
+  .runtime-node.is-active:not(:last-child)::before{
+    border-left-color:color-mix(in srgb, var(--accent) 60%, var(--rule));
+    border-left-style:solid;
+  }
+  .runtime-icon{
+    position:relative;
+    z-index:1;
+    width:28px;
+    height:28px;
+    display:grid;
+    place-items:center;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:var(--panel-2);
+    color:var(--muted);
+    font:900 9px/1 var(--mono);
+  }
+  .runtime-icon img{
+    width:72%;
+    height:72%;
+    object-fit:contain;
+    display:block;
+    background:white;
+    border-radius:5px;
+    padding:2px;
+  }
+  .runtime-node.is-done .runtime-icon,
+  .runtime-node.is-active .runtime-icon{
+    border-color:color-mix(in srgb, var(--accent) 62%, var(--rule));
+    background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 62%,black));
+    color:white;
+  }
+  .runtime-node.is-active .runtime-icon{
+    box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  .runtime-node.is-blocked .runtime-icon{
+    border-color:color-mix(in srgb, var(--pro) 70%, var(--rule));
+    background:linear-gradient(135deg,var(--pro),#843126);
+  }
+  .runtime-copy{
+    min-width:0;
+    padding:1px 0 11px;
+  }
+  .runtime-copy b,
+  .runtime-copy span{
+    display:block;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .runtime-copy b{font:900 12px/1.15 var(--mono)}
+  .runtime-copy span{
+    margin-top:3px;
+    color:var(--muted);
+    font:800 10px/1.2 var(--mono);
+  }
+  .runtime-node.is-active .runtime-copy b{color:var(--accent)}
+  .runtime-note{
+    margin-top:10px;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:var(--panel-2);
+    padding:8px;
+    color:var(--muted);
+    font:11px/1.35 var(--mono);
   }
   .inspector-head{
     display:flex;
@@ -1152,7 +1274,7 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   @media (max-width:1040px){
     .shell{grid-template-columns:236px minmax(0,1fr)}
-    .inspector{display:none}
+    .runtime-panel,.inspector{display:none}
   }
   @media (max-width:860px){
     body{padding:12px}
@@ -1162,7 +1284,7 @@
       grid-template-columns:1fr;
       grid-template-rows:auto minmax(0,1fr);
     }
-    .inspector{display:none}
+    .runtime-panel,.inspector{display:none}
     .sidebar{
       grid-template-rows:auto auto auto auto;
       min-height:auto;
@@ -1268,6 +1390,17 @@
     </form>
   </main>
 
+  <aside class="runtime-panel" aria-label="Runtime architecture">
+    <div class="runtime-head">
+      <b>Runtime</b>
+      <span id="runtimeStatus">idle</span>
+    </div>
+    <div class="runtime-body">
+      <div class="runtime-flow" id="runtimeFlow"></div>
+      <div class="runtime-note" id="runtimeNote">Send a task to watch the request move through TokenTriage.</div>
+    </div>
+  </aside>
+
   <aside class="inspector" aria-label="Routing receipt">
     <div class="inspector-head">
       <b>Receipt</b>
@@ -1322,6 +1455,9 @@ const send = document.getElementById('send');
 const modelTrack = document.getElementById('modelTrack');
 const railStatus = document.getElementById('railStatus');
 const inspectorBody = document.getElementById('inspectorBody');
+const runtimeStatus = document.getElementById('runtimeStatus');
+const runtimeFlow = document.getElementById('runtimeFlow');
+const runtimeNote = document.getElementById('runtimeNote');
 const KEY = 'tokentriage.history';
 
 const MODEL_STACK = [
@@ -1352,6 +1488,38 @@ const STAGE_LABELS = {
   DONE: 'Savings Receipt',
   QUARANTINE: 'Security Gateway',
   ERROR: 'Routing Error',
+};
+
+const RUNTIME_STEPS = [
+  {id:'gateway', label:'Gateway', detail:'OpenAI/Gemini ingress', icon:'API', accent:'var(--qwen)'},
+  {id:'security', label:'Security', detail:'sanitize + block', icon:'SG', accent:'var(--pro)'},
+  {id:'cache', label:'Cache T0', detail:'semantic reuse', img:'/imgs/logos/nomic.png', accent:'var(--cache)'},
+  {id:'triage', label:'Triage', detail:'task type + complexity', img:'/imgs/logos/qwen.png', accent:'var(--qwen)'},
+  {id:'policy', label:'MCP + Policy', detail:'prices, floors, caps', icon:'MCP', accent:'var(--verify)'},
+  {id:'models', label:'Models', detail:'dispatch tier', img:'/imgs/logos/qwen.png', accent:'var(--cache)'},
+  {id:'verifier', label:'Verifier', detail:'sample + escalate', icon:'V', accent:'var(--verify)'},
+  {id:'receipt', label:'Receipt', detail:'cost + savings proof', icon:'UI', accent:'var(--cache)'},
+];
+
+const RUNTIME_STAGE = {
+  ROUTING:'gateway',
+  SANITIZED:'security',
+  CACHE_HIT:'cache',
+  CACHE_MISS:'cache',
+  TRIAGED:'triage',
+  ROUTED:'policy',
+  DISPATCHING:'models',
+  DISPATCHED:'models',
+  VERIFYING:'verifier',
+  VERIFIED_PASS:'verifier',
+  VERIFIED_FAIL:'verifier',
+  ESCALATING:'verifier',
+  ESCALATED_T1:'models',
+  ESCALATED_T2:'models',
+  ESCALATED_T3:'models',
+  DONE:'receipt',
+  QUARANTINE:'security',
+  ERROR:'security',
 };
 
 let history = [];
@@ -1495,6 +1663,71 @@ function logoHtml(model){
   return model.img ? `<img src="${esc(model.img)}" alt="" loading="lazy">` : esc(model.logo);
 }
 
+function runtimeIcon(step){
+  return step.img ? `<img src="${esc(step.img)}" alt="" loading="lazy">` : esc(step.icon);
+}
+
+function renderRuntime(done = [], active = null, note = 'Send a task to watch the request move through TokenTriage.', blocked = false){
+  const doneSet = new Set(done);
+  runtimeFlow.innerHTML = RUNTIME_STEPS.map(step => {
+    const cls = [
+      'runtime-node',
+      doneSet.has(step.id) ? 'is-done' : '',
+      active === step.id ? 'is-active' : '',
+      blocked && active === step.id ? 'is-blocked' : '',
+    ].filter(Boolean).join(' ');
+    return `<div class="${cls}" style="--accent:${step.accent}" data-id="${esc(step.id)}">
+      <div class="runtime-icon">${runtimeIcon(step)}</div>
+      <div class="runtime-copy">
+        <b>${esc(step.label)}</b>
+        <span>${esc(step.detail)}</span>
+      </div>
+    </div>`;
+  }).join('');
+  runtimeStatus.textContent = active ? RUNTIME_STEPS.find(s => s.id === active)?.label || 'routing' : 'idle';
+  runtimeNote.textContent = note;
+}
+
+function runtimeFromEvents(events = [], meta = null){
+  const done = [];
+  let active = null;
+  let note = 'Replay selected response.';
+  let blocked = false;
+  for(const ev of events){
+    const id = RUNTIME_STAGE[ev.stage];
+    if(!id) continue;
+    if(!done.includes(id)) done.push(id);
+    active = id;
+    note = ev.detail || STAGE_LABELS[ev.stage] || id;
+    blocked = ev.stage === 'QUARANTINE' || ev.stage === 'ERROR';
+  }
+  if(meta){
+    for(const id of ['gateway','security','cache']){
+      if(!done.includes(id)) done.push(id);
+    }
+    if(!meta.cache_hit){
+      for(const id of ['triage','policy','models']){
+        if(!done.includes(id)) done.push(id);
+      }
+    }
+    if(meta.verified || meta.escalated_to){
+      if(!done.includes('verifier')) done.push('verifier');
+    }
+    if(!done.includes('receipt')) done.push('receipt');
+    active = 'receipt';
+    note = meta.cache_hit ? 'Cache hit returned at T0 with no model call.' : `Selected ${meta.chosen_tier || 'tier'} and recorded savings.`;
+  }
+  renderRuntime(done, active, note, blocked);
+}
+
+function resetRuntime(){
+  renderRuntime([], null, 'Send a task to watch the request move through TokenTriage.');
+}
+
+function updateRuntimeEvent(ev, events){
+  runtimeFromEvents(events, null);
+}
+
 function setEmpty(){
   empty.style.display = history.length ? 'none' : 'grid';
 }
@@ -1622,6 +1855,7 @@ function stopCounterRotation(){
 
 function beginRouting(){
   railState = {mode:'routing', selected:null, verified:false, escalatedTo:null, cacheHit:false};
+  renderRuntime(['gateway'], 'gateway', 'Request entered TokenTriage.');
   scanIndex = -1;
   if(scanTimer) clearInterval(scanTimer);
   // Expand the rail
@@ -1706,6 +1940,7 @@ function finishRouting(meta, ms){
     cacheHit: Boolean(meta?.cache_hit),
   };
   renderRail();
+  runtimeFromEvents([], meta);
   
   // Render the inspector but keep it hidden so the target exists
   showInspector(meta, ms, true);
@@ -1727,6 +1962,7 @@ function resetRail(){
   stopCounterRotation();
   railState = {mode:'idle', selected:null, verified:false, escalatedTo:null, cacheHit:false};
   renderRail();
+  resetRuntime();
   // Keep rail collapsed when idle
   const rail = document.getElementById('modelRail');
   rail.classList.remove('is-open');
@@ -1763,7 +1999,10 @@ function renderTurn(turn){
     applyMath(bubble);
     wrap.appendChild(bubble);
     if(turn.events) wrap.appendChild(traceBlock(turn.events));
-    if(turn.meta) wrap.addEventListener('click', () => showInspector(turn.meta, turn.ms));
+    if(turn.meta) wrap.addEventListener('click', () => {
+      showInspector(turn.meta, turn.ms);
+      runtimeFromEvents(turn.events || [], turn.meta);
+    });
   }
   feed.appendChild(wrap);
   return wrap;
@@ -1776,6 +2015,8 @@ function renderAll(){
   const last = [...history].reverse().find(m => m.role === 'assistant' && m.meta);
   if(last) showInspector(last.meta, last.ms);
   else clearInspector();
+  if(last) runtimeFromEvents(last.events || [], last.meta);
+  else resetRuntime();
   feed.scrollTop = feed.scrollHeight;
 }
 
@@ -1917,6 +2158,7 @@ async function ask(text){
   const thinking = div('thinking', '<span class="spinner"></span><span>Routing</span>');
   const twrap = div('turn');
   const events = [{stage:'ROUTING', detail:text}];
+  runtimeFromEvents(events, null);
   const trace = traceBlock(events, {live:true});
   twrap.appendChild(thinking);
   twrap.appendChild(trace);
@@ -1941,6 +2183,7 @@ async function ask(text){
       }
       events.push(item);
       appendTraceEvent(trace, item);
+      updateRuntimeEvent(item, events);
       if(item.stage === 'QUARANTINE' || item.stage === 'ERROR') blocked = item;
       feed.scrollTop = feed.scrollHeight;
     });
@@ -1953,6 +2196,7 @@ async function ask(text){
       twrap.insertBefore(div('bubble answer', msg + esc(blocked.detail || 'request failed')), trace);
       twrap.querySelector('.answer').style.borderColor = 'var(--pro)';
       finishTrace(trace);
+      updateRuntimeEvent(blocked, events);
       feed.scrollTop = feed.scrollHeight;
       return;
     }
@@ -1961,11 +2205,15 @@ async function ask(text){
     thinking.remove();
     const answer = data.answer;
     finishRouting(data.tokentriage, ms);
+    runtimeFromEvents(events, data.tokentriage);
     const bubble = div('bubble answer', renderMarkdown(answer));
     applyMath(bubble);
     twrap.insertBefore(bubble, trace);
     twrap.classList.add('selectable');
-    twrap.addEventListener('click', () => showInspector(data.tokentriage, ms));
+    twrap.addEventListener('click', () => {
+      showInspector(data.tokentriage, ms);
+      runtimeFromEvents(events, data.tokentriage);
+    });
     history.push({role:'assistant', content:answer, meta:data.tokentriage, ms, events});
     finishTrace(trace);
     save();
@@ -1999,6 +2247,7 @@ document.getElementById('clear').addEventListener('click', (e)=>{
   renderAll();
   resetRail();
   clearInspector();
+  resetRuntime();
   refreshHistory();
   input.focus();
 });
