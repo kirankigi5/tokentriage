@@ -99,17 +99,17 @@ open http://localhost:8000/architecture
 
 ```mermaid
 flowchart TD
-    Client["Client apps<br/>OpenAI + Gemini compatible"]
-    Gateway["FastAPI Gateway<br/>/v1 + /v1beta + streaming"]
-    Security["Security Gateway<br/>sanitize · rate-limit · quarantine"]
-    Cache["Semantic Cache T0<br/>Nomic embeddings · $0 call"]
-    Triage["Triage Agent<br/>task type · complexity · rationale"]
-    MCP["Pricing MCP Server<br/>benchmarks · budget · decision log"]
-    Policy["Policy Engine<br/>accuracy floors · caps · min tiers"]
-    Models["Model Pool<br/>Qwen local tiers via Ollama"]
-    Verify["Verifier Agent<br/>sample · judge · escalate"]
-    Tune["Feedback Store<br/>tokentriage tune"]
-    Dash["Dashboard + Receipt<br/>savings · cache · escalations"]
+    Client["Clients<br/>OpenAI + Gemini"]
+    Gateway["Gateway<br/>/v1 + /v1beta"]
+    Security["Security<br/>sanitize + block"]
+    Cache["Cache T0<br/>$0 hit"]
+    Triage["Triage<br/>type + complexity"]
+    MCP["MCP<br/>prices + budget"]
+    Policy["Policy<br/>floors + caps"]
+    Models["Models<br/>Qwen local tiers"]
+    Verify["Verifier<br/>sample + escalate"]
+    Tune["Feedback<br/>tune thresholds"]
+    Dash["Dashboard<br/>receipt + savings"]
 
     Client --> Gateway --> Security --> Cache
     Cache -- hit --> Dash
@@ -133,6 +133,18 @@ flowchart TD
     class Security,Verify risk
     class Cache,Models,Dash,Tune save
     class Triage,MCP,Policy control
+
+    style Client font-size:12px
+    style Gateway font-size:12px
+    style Security font-size:12px
+    style Cache font-size:12px
+    style Triage font-size:12px
+    style MCP font-size:12px
+    style Policy font-size:12px
+    style Models font-size:12px
+    style Verify font-size:12px
+    style Tune font-size:12px
+    style Dash font-size:12px
 ```
 
 <details open>
