@@ -13,6 +13,7 @@ of the system is one inspectable file.
 from __future__ import annotations
 
 import json
+import math
 import sqlite3
 import time
 from contextlib import contextmanager
@@ -34,7 +35,8 @@ CREATE TABLE IF NOT EXISTS decisions (
     cache_hit INTEGER DEFAULT 0,
     verified INTEGER DEFAULT 0, -- 0 = not sampled, 1 = sampled
     verdict TEXT,               -- pass / fail / NULL
-    escalated_to TEXT           -- tier it escalated to, if any
+    escalated_to TEXT,          -- tier it escalated to, if any
+    dispatch_latency_ms REAL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS feedback (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -123,6 +125,10 @@ def init_db() -> None:
             c.execute("ALTER TABLE conversations ADD COLUMN is_pinned INTEGER DEFAULT 0")
         except sqlite3.OperationalError:
             pass  # Column already exists
+        try:
+            c.execute("ALTER TABLE decisions ADD COLUMN dispatch_latency_ms REAL DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
         for tier, tt, acc in _SEED_BENCHMARKS:
             c.execute(
                 "INSERT OR IGNORE INTO benchmarks (model_tier, task_type, accuracy, samples)"
@@ -136,12 +142,12 @@ def log_decision(**kw) -> None:
         c.execute(
             """INSERT INTO decisions (ts, task_id, task_preview, task_type, complexity,
                chosen_tier, rationale, cost_usd, baseline_cost_usd, cache_hit,
-               verified, verdict, escalated_to)
+               verified, verdict, escalated_to, dispatch_latency_ms)
                VALUES (:ts,:task_id,:task_preview,:task_type,:complexity,:chosen_tier,
                :rationale,:cost_usd,:baseline_cost_usd,:cache_hit,:verified,:verdict,
-               :escalated_to)""",
+               :escalated_to,:dispatch_latency_ms)""",
             {"ts": time.time(), "verdict": None, "escalated_to": None,
-             "verified": 0, "cache_hit": 0, **kw},
+             "verified": 0, "cache_hit": 0, "dispatch_latency_ms": 0.0, **kw},
         )
 
 
@@ -269,7 +275,8 @@ def stats(window_hours: float = 24.0) -> dict:
             "SELECT chosen_tier, COUNT(*) n FROM decisions WHERE ts >= ? GROUP BY chosen_tier",
             (since,)).fetchall()
         recent = c.execute(
-            """SELECT ts, task_preview, task_type, chosen_tier, cost_usd, verdict, escalated_to
+            """SELECT ts, task_preview, task_type, chosen_tier, cost_usd,
+                      dispatch_latency_ms, verdict, escalated_to
                FROM decisions ORDER BY id DESC LIMIT 15""").fetchall()
         
         quarantined = c.execute("SELECT COUNT(*) n FROM quarantine WHERE ts >= ?", (since,)).fetchone()["n"]
@@ -279,9 +286,16 @@ def stats(window_hours: float = 24.0) -> dict:
         verdicts = c.execute(
             "SELECT verdict, COUNT(*) n FROM decisions WHERE ts >= ? AND verdict IS NOT NULL GROUP BY verdict",
             (since,)).fetchall()
+        lat_rows = c.execute(
+            """SELECT dispatch_latency_ms FROM decisions
+               WHERE ts >= ? AND dispatch_latency_ms IS NOT NULL
+                     AND dispatch_latency_ms > 0
+               ORDER BY dispatch_latency_ms""", (since,)).fetchall()
 
     baseline = row["baseline"] or 0.0
     cost = row["cost"] or 0.0
+    latencies = [float(r["dispatch_latency_ms"]) for r in lat_rows]
+    p95_index = max(0, min(len(latencies) - 1, math.ceil(0.95 * len(latencies)) - 1)) if latencies else 0
     return {
         "requests": row["n"],
         "cost_usd": round(cost, 6),
@@ -295,4 +309,6 @@ def stats(window_hours: float = 24.0) -> dict:
         "quarantined": quarantined,
         "task_types": {r["task_type"]: r["n"] for r in task_types},
         "verifier_stats": {r["verdict"]: r["n"] for r in verdicts},
+        "avg_dispatch_latency_ms": round(sum(latencies) / len(latencies), 1) if latencies else 0.0,
+        "p95_dispatch_latency_ms": round(latencies[p95_index], 1) if latencies else 0.0,
     }

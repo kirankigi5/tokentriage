@@ -8,6 +8,7 @@
   tokentriage attack-test   fire canned prompt-injections at the security gateway
   tokentriage evidence      generate judge-facing benchmark artifacts
   tokentriage demo          seed curated demo traffic for the dashboard
+  tokentriage judge-mode    seed no-key replay data for dashboard + chat
 """
 from __future__ import annotations
 
@@ -113,6 +114,22 @@ def demo():
     metrics = seed_demo_traffic()
     typer.echo(json.dumps(metrics, indent=2))
     typer.echo("Open http://localhost:8000/dashboard after `tokentriage serve`.")
+
+
+@app.command("judge-mode")
+def judge_mode():
+    """Seed a deterministic no-key replay for judges.
+
+    This does not call Ollama or any cloud API. It creates a polished chat
+    history plus dashboard records that demonstrate cheap routing, cache hit,
+    sensitive policy routing, and security quarantine.
+    """
+    from tokentriage.evidence import seed_judge_replay
+
+    payload = seed_judge_replay()
+    typer.echo(json.dumps(payload, indent=2))
+    typer.echo("Open http://localhost:8000/chat and select 'Judge replay' from history.")
+    typer.echo("Dashboard proof: http://localhost:8000/dashboard")
 
 
 @app.command()

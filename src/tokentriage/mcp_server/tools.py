@@ -29,6 +29,22 @@ def get_accuracy_benchmark(tier: str, task_type: str) -> float:
     return db.get_benchmark(tier, task_type)
 
 
+def get_latency_benchmark(tier: str | None = None, window_hours: float = 24.0) -> dict:
+    """Observed dispatch latency from the decision log.
+
+    Today this is aggregate p50/p95-style evidence for dashboards and agents.
+    It deliberately uses real routed calls, so cloud tiers can be evaluated
+    without changing the routing state machine.
+    """
+    stats = db.stats(window_hours)
+    return {
+        "tier": tier or "all",
+        "window_hours": window_hours,
+        "avg_dispatch_latency_ms": stats["avg_dispatch_latency_ms"],
+        "p95_dispatch_latency_ms": stats["p95_dispatch_latency_ms"],
+    }
+
+
 def check_budget_remaining() -> dict:
     """Remaining daily budget; the circuit breaker's data source."""
     from tokentriage.config import load_policy

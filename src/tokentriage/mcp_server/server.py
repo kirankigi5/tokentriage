@@ -34,6 +34,12 @@ def get_accuracy_benchmark(tier: str, task_type: str) -> float:
 
 
 @mcp.tool()
+def get_latency_benchmark(tier: str = "", window_hours: float = 24.0) -> dict:
+    """Return observed dispatch latency for routed calls."""
+    return tools.get_latency_benchmark(tier or None, window_hours)
+
+
+@mcp.tool()
 def check_budget_remaining() -> dict:
     """Return today's spend cap, spend so far, and remaining budget in USD."""
     return tools.check_budget_remaining()

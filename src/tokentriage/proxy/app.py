@@ -65,6 +65,7 @@ def _tt_meta(result) -> dict:
         "verdict": result.verdict,
         "escalated_to": result.escalated_to,
         "context_note": result.context_note,
+        "dispatch_latency_ms": round(getattr(result, "dispatch_latency_ms", 0.0), 1),
         "trace": [{"state": s, "ts": ts} for s, ts in result.trace],
     }
 

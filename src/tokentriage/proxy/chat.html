@@ -2029,6 +2029,7 @@ function showInspector(m, ms, hidden = false){
   const escLabel = m.escalated_to ? `to ${m.escalated_to}` : 'none';
   const modelDetail = m.model_id || model.detail;
   const tokenClass = model.token || '';
+  const dispatchMs = Number(m.dispatch_latency_ms || 0);
 
   if (hidden) {
     inspectorBody.style.opacity = '0';
@@ -2052,6 +2053,7 @@ function showInspector(m, ms, hidden = false){
       <div class="inspector-row"><span>Cost</span><b>${usd(m.cost_usd)}</b></div>
       <div class="inspector-row"><span>Cloud base</span><b>${usd(m.baseline_cost_usd)}</b></div>
       <div class="inspector-row"><span>Cache</span><b>${esc(cache)}</b></div>
+      <div class="inspector-row"><span>Dispatch</span><b>${dispatchMs.toFixed(0)} ms</b></div>
       <div class="inspector-row"><span>Verify</span><b>${esc(verdict)} · ${esc(escLabel)}</b></div>
       ${m.context_note ? `<div class="inspector-row"><span>Context</span><b>${esc(m.context_note)}</b></div>` : ''}
     </div>

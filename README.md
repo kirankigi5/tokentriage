@@ -31,8 +31,18 @@ open http://localhost:8000/architecture
 | Surface | Why it matters |
 |---|---|
 | **Chat** | Live routing trace, model dispatch, cache hit/miss, and receipt per request |
-| **Dashboard** | Spend, all-frontier baseline, savings, cache hits, escalations, recent decisions |
+| **Dashboard** | Spend, all-frontier baseline, savings, dispatch latency, cache hits, escalations, recent decisions |
 | **Interactive Architecture** | Clickable system map with scenario paths for cache hit, cheap route, sensitive escalation, and security block |
+
+No models available during judging? Seed a deterministic replay without
+Ollama, Gemini, or OpenAI:
+
+```bash
+tokentriage judge-mode
+tokentriage serve
+open http://localhost:8000/chat       # select "Judge replay" from history
+open http://localhost:8000/dashboard  # spend, savings, latency, cache proof
+```
 
 ## The killer metric: 98.1% lower inference cost
 
@@ -69,6 +79,7 @@ The dashboard remains available from the same server:
 open http://localhost:8000/dashboard
 open http://localhost:8000/architecture
 tokentriage demo             # seed curated dashboard traffic
+tokentriage judge-mode       # no-key replay if local models are unavailable
 ```
 
 Evidence and writeups:
@@ -206,7 +217,7 @@ yardstick. See `docs/architecture.md` for full design rationale.
 | Security features | `src/tokentriage/security/` — gateway, injection screen, budget circuit breaker, key isolation, sensitive-task backstop |
 | API compatibility | OpenAI `/v1/chat/completions` + Gemini `/v1beta/models/{model}:generateContent` |
 | Deployability | FastAPI gateway (`proxy/app.py`), custom chat UI, dashboard, Dockerfile |
-| Agent skills (CLI) | `src/tokentriage/cli.py` — serve / benchmark / eval / report / evidence / demo / tune / adk-demo / attack-test |
+| Agent skills (CLI) | `src/tokentriage/cli.py` — serve / benchmark / eval / report / evidence / demo / judge-mode / tune / adk-demo / attack-test |
 | Antigravity | Built in the Antigravity IDE (see video) |
 
 **ADK note:** routing/cost/escalation is deterministic *by design* — you don't
@@ -240,6 +251,7 @@ tokentriage serve            # http://localhost:8000  ·  /dashboard
 tokentriage benchmark
 tokentriage report
 tokentriage evidence
+tokentriage judge-mode       # optional: seed no-key judge replay
 ```
 
 **Deploy with Docker:** the app image is *not* self-contained — it needs Ollama

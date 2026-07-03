@@ -46,6 +46,7 @@ class RouteResult:
     verdict: str | None = None
     escalated_to: str | None = None
     context_note: str | None = None  # how conversation context was shared (cloud)
+    dispatch_latency_ms: float = 0.0  # total provider dispatch latency, incl. escalation
     trace: list[tuple[str, float]] = field(default_factory=list)  # (state, ts)
 
 
@@ -162,6 +163,15 @@ def _dispatch(tier: str, task: str, messages: list[dict] | None = None) -> tuple
     return providers.generate(TIERS[tier], task, messages)
 
 
+def _timed_dispatch(tier: str, task: str,
+                    messages: list[dict] | None = None) -> tuple[str, int, int, float]:
+    """Dispatch and return latency in milliseconds for routing telemetry."""
+    start = time.perf_counter()
+    answer, itok, otok = _dispatch(tier, task, messages)
+    latency_ms = (time.perf_counter() - start) * 1000
+    return answer, itok, otok, latency_ms
+
+
 def route(task: str, policy: dict, cache: SemanticCache,
           messages: list[dict] | None = None, on_event=None) -> RouteResult:
     """Full state machine for one request. Task is ALREADY gateway-sanitized.
@@ -208,18 +218,21 @@ def route(task: str, policy: dict, cache: SemanticCache,
     send_msgs, cnote = _privacy_context(TIERS[tier], task, messages, policy)
     emit("DISPATCHING", tier=tier, model=TIERS[tier].model_id,
          detail=f"generating on {TIERS[tier].model_id}")
-    answer, itok, otok = _dispatch(tier, task, send_msgs)
+    answer, itok, otok, latency_ms = _timed_dispatch(tier, task, send_msgs)
     cost = estimate_cost_usd(tier, itok, otok)
     breaker.record(tier, cost)
     baseline = estimate_baseline_usd(itok, otok)  # what all-cloud-frontier would cost
     if cnote:
         emit("CONTEXT", detail=cnote)
-    emit("DISPATCHED", cost=cost, tokens=itok + otok, detail=f"answered by {TIERS[tier].model_id}")
+    emit("DISPATCHED", cost=cost, tokens=itok + otok,
+         latency_ms=round(latency_ms, 1),
+         detail=f"answered by {TIERS[tier].model_id}")
 
     result = RouteResult(task_id, answer, tier, verdict.task_type,
                          verdict.complexity_score,
                          f"{verdict.rationale} | {why}", cost, baseline,
-                         context_note=cnote, trace=trace)
+                         context_note=cnote, dispatch_latency_ms=latency_ms,
+                         trace=trace)
 
     # --- Sampled verification + bounded escalation -------------------------
     max_hops = int(policy.get("escalation", {}).get("max_hops", 2))
@@ -240,17 +253,18 @@ def route(task: str, policy: dict, cache: SemanticCache,
         emit("ESCALATING", tier=up, model=TIERS[up].model_id,
              detail=f"answer too thin — retrying on {TIERS[up].model_id}")
         send_msgs, cnote = _privacy_context(TIERS[up], task, messages, policy)
-        answer, itok, otok = _dispatch(up, task, send_msgs)
+        answer, itok, otok, latency_ms = _timed_dispatch(up, task, send_msgs)
         ecost = estimate_cost_usd(up, itok, otok)
         breaker.record(up, ecost)
         result.answer = answer
         result.cost_usd += ecost
+        result.dispatch_latency_ms += latency_ms
         result.escalated_to = up
         result.chosen_tier = up
         if cnote:
             result.context_note = cnote
         hops += 1
-        emit(f"ESCALATED_{up}", tier=up)
+        emit(f"ESCALATED_{up}", tier=up, latency_ms=round(latency_ms, 1))
 
     # --- Cache the final answer + log --------------------------------------
     if policy.get("cache", {}).get("enabled", True) and not result.cache_hit:
@@ -267,5 +281,6 @@ def _log(r: RouteResult, task: str) -> None:
         cost_usd=r.cost_usd, baseline_cost_usd=r.baseline_cost_usd,
         cache_hit=int(r.cache_hit), verified=int(r.verified),
         verdict=r.verdict, escalated_to=r.escalated_to,
+        dispatch_latency_ms=round(r.dispatch_latency_ms, 1),
     )
     mcp_tools.log_routing_decision(r.task_id, r.chosen_tier, r.rationale, r.cost_usd)

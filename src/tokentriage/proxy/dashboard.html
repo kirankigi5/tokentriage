@@ -536,6 +536,14 @@
           <span>Escalation Rate</span>
           <b id="escRate">0.0%</b>
         </div>
+        <div class="metric">
+          <span>Avg Dispatch</span>
+          <b id="avgLatency">0 ms</b>
+        </div>
+        <div class="metric">
+          <span>P95 Dispatch</span>
+          <b id="p95Latency">0 ms</b>
+        </div>
       </div>
       <div class="side-panels">
         <aside class="budget-panel">
@@ -606,11 +614,12 @@
             <th>Type</th>
             <th>Model</th>
             <th>Cost</th>
+            <th>Latency</th>
             <th>Verify</th>
           </tr>
         </thead>
         <tbody id="feed">
-          <tr><td colspan="5"><div class="empty">Waiting for routing decisions.</div></td></tr>
+          <tr><td colspan="6"><div class="empty">Waiting for routing decisions.</div></td></tr>
         </tbody>
       </table>
     </section>
@@ -703,7 +712,7 @@ function renderTasks(types, requests){
 
 function renderFeed(rows){
   if(!rows || rows.length === 0){
-    el('feed').innerHTML = '<tr><td colspan="5"><div class="empty">Waiting for routing decisions.</div></td></tr>';
+    el('feed').innerHTML = '<tr><td colspan="6"><div class="empty">Waiting for routing decisions.</div></td></tr>';
     return;
   }
   el('feed').innerHTML = rows.map(r => {
@@ -728,6 +737,7 @@ function renderFeed(rows){
         </div>
       </td>
       <td>${usd(r.cost_usd, 6)}</td>
+      <td>${Number(r.dispatch_latency_ms || 0).toFixed(0)} ms</td>
       <td><span class="pill ${verifyClass}">${esc(verify)}</span></td>
     </tr>`;
   }).join('');
@@ -752,6 +762,8 @@ async function tick(){
     
     el('cacheRate').textContent = reqs > 0 ? (100 * cacheHits / reqs).toFixed(1) + '%' : '0.0%';
     el('escRate').textContent = reqs > 0 ? (100 * escalations / reqs).toFixed(1) + '%' : '0.0%';
+    el('avgLatency').textContent = `${Number(data.avg_dispatch_latency_ms || 0).toFixed(0)} ms`;
+    el('p95Latency').textContent = `${Number(data.p95_dispatch_latency_ms || 0).toFixed(0)} ms`;
     
     // Budget Burn
     const spent = Number(data.budget_spent_today || 0);

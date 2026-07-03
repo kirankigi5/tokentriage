@@ -49,3 +49,17 @@ def test_run_evidence_writes_expected_artifacts(tmp_path, monkeypatch):
     assert (run_dir / "routing_results.csv").exists()
     assert (run_dir / "dashboard.html").exists()
     assert (tmp_path / "reports" / "latest" / "dashboard.html").exists()
+
+
+def test_judge_replay_seeds_conversation_and_latency(tmp_path, monkeypatch):
+    monkeypatch.setattr(db, "settings", type("S", (), {"db_path": str(tmp_path / "t.db")})())
+
+    payload = ev.seed_judge_replay()
+    convo = db.get_conversation(payload["conversation_id"])
+    stats = db.stats()
+
+    assert payload["seeded_decisions"] >= 3
+    assert len(convo) >= 6
+    assert stats["requests"] >= 3
+    assert stats["avg_dispatch_latency_ms"] > 0
+    assert stats["recent"][0]["dispatch_latency_ms"] >= 0
