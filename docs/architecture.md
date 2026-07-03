@@ -1,5 +1,10 @@
 # TokenTriage — Architecture & Design Rationale
 
+For the judge-facing visual map, run `tokentriage serve` and open
+`http://localhost:8000/architecture`. The page includes clickable components
+and scenario paths for cache hit, cheap route, sensitive escalation, and
+security block.
+
 ## Decision function
 
 > Choose the cheapest tier whose measured accuracy for this task type meets

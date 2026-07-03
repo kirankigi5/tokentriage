@@ -270,6 +270,12 @@ def dashboard():
     return html.read_text()
 
 
+@app.get("/architecture", response_class=HTMLResponse)
+def architecture():
+    html = Path(__file__).parent / "architecture.html"
+    return html.read_text()
+
+
 @app.get("/", response_class=HTMLResponse)
 @app.get("/chat", response_class=HTMLResponse)
 def chat():

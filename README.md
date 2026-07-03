@@ -17,6 +17,23 @@ backend tier, and Gemini-style clients can call TokenTriage through
 
 ---
 
+## Visual proof for judges
+
+Run one command and open the three judge surfaces:
+
+```bash
+tokentriage serve
+open http://localhost:8000/chat
+open http://localhost:8000/dashboard
+open http://localhost:8000/architecture
+```
+
+| Surface | Why it matters |
+|---|---|
+| **Chat** | Live routing trace, model dispatch, cache hit/miss, and receipt per request |
+| **Dashboard** | Spend, all-frontier baseline, savings, cache hits, escalations, recent decisions |
+| **Interactive Architecture** | Clickable system map with scenario paths for cache hit, cheap route, sensitive escalation, and security block |
+
 ## The killer metric: 98.1% lower inference cost
 
 Real run: 30-query business workload, all tiers on local open-source models
@@ -50,11 +67,13 @@ The dashboard remains available from the same server:
 
 ```bash
 open http://localhost:8000/dashboard
+open http://localhost:8000/architecture
 tokentriage demo             # seed curated dashboard traffic
 ```
 
 Evidence and writeups:
 
+- `http://localhost:8000/architecture` — interactive runtime architecture map
 - `reports/latest/dashboard.html` — offline interactive evidence dashboard
 - `docs/CAPSTONE_NARRATIVE.md` — business story and judge pitch
 - `docs/SCIENTIFIC_REPORT.md` — benchmark methodology and results
@@ -70,35 +89,87 @@ deciding, per task, which model is *sufficient*. TokenTriage is that layer.
 
 ## Architecture
 
+The README view gives judges a visual system map immediately. The live version
+is interactive and clickable:
+
+```bash
+tokentriage serve
+open http://localhost:8000/architecture
 ```
-client ──► FastAPI gateway (OpenAI-compatible)
-              │
-              ▼
-        Security Gateway ── sanitizer · injection screen · rate limit · budget precheck
-              │
-              ▼
-        Semantic Cache (T0, $0) ── hit? return
-              │ miss
-              ▼
-        Orchestrator Agent ── owns the routing state machine
-          ├── Triage Agent: complexity score + task taxonomy + rationale
-          ├── MCP Server: pricing · per-task benchmarks · budget · decision log
-          └── Policy Engine (YAML): accuracy floor · tier overrides · caps
-              │
-              ▼
-        Model Pool (via provider abstraction)
-          T1 qwen2.5:3b  →  T2 qwen2.5:7b  →  T3 qwen2.5:14b     (local, Ollama, $0)
-          (swap any tier for gemini / openai by config — see providers.py)
-              │
-              ▼
-        Verifier Agent (sampled) ──fail──► Escalation (tier+1, re-verify)
-              │
-              ▼
-        Feedback Store ──► `tokentriage tune` adapts thresholds
-              │
-              ▼
-        Dashboard: spend vs all-cloud baseline · savings % · cache hits · escalations
+
+```mermaid
+flowchart LR
+    Client["Client apps<br/>OpenAI + Gemini compatible"]
+    Gateway["FastAPI Gateway<br/>/v1 + /v1beta + streaming"]
+    Security["Security Gateway<br/>sanitize · rate-limit · quarantine"]
+    Cache["Semantic Cache T0<br/>Nomic embeddings · $0 call"]
+    Triage["Triage Agent<br/>task type · complexity · rationale"]
+    MCP["Pricing MCP Server<br/>benchmarks · budget · decision log"]
+    Policy["Policy Engine<br/>accuracy floors · caps · min tiers"]
+    Models["Model Pool<br/>Qwen local tiers via Ollama"]
+    Verify["Verifier Agent<br/>sample · judge · escalate"]
+    Tune["Feedback Store<br/>tokentriage tune"]
+    Dash["Dashboard + Receipt<br/>savings · cache · escalations"]
+
+    Client --> Gateway --> Security --> Cache
+    Cache -- hit --> Dash
+    Cache -- miss --> Triage
+    Triage --> MCP
+    Triage --> Policy
+    MCP --> Policy
+    Policy --> Models
+    Models --> Verify
+    Verify -- pass --> Dash
+    Verify -- fail --> Models
+    Verify --> Tune --> MCP
+    Models --> Dash
+
+    classDef ingress fill:#eef3ff,stroke:#385acb,color:#17201c
+    classDef control fill:#fff7e8,stroke:#a66b11,color:#17201c
+    classDef save fill:#eaf8f2,stroke:#168a68,color:#17201c
+    classDef risk fill:#fff0ed,stroke:#c24a3a,color:#17201c
+
+    class Client,Gateway ingress
+    class Security,Verify risk
+    class Cache,Models,Dash,Tune save
+    class Triage,MCP,Policy control
 ```
+
+<details open>
+<summary><b>Scenario A: cheap route, maximum savings</b></summary>
+
+`Security Gateway -> Semantic Cache miss -> Triage Agent -> MCP Pricing -> Policy Engine -> Qwen T1 -> Savings Receipt`
+
+Judge takeaway: a simple task stays local and cheap, while the receipt compares
+actual cost against the all-frontier Gemini baseline.
+</details>
+
+<details>
+<summary><b>Scenario B: semantic cache hit, zero model call</b></summary>
+
+`Security Gateway -> Semantic Cache hit -> Savings Receipt`
+
+Judge takeaway: repeat or near-duplicate tasks return at T0, which means no
+LLM dispatch and effectively zero model cost.
+</details>
+
+<details>
+<summary><b>Scenario C: sensitive task, policy-protected escalation</b></summary>
+
+`Security Gateway -> Triage Agent -> Policy min_tier -> Stronger local tier -> Verifier -> Dashboard`
+
+Judge takeaway: legal/financial/medical work cannot be routed below the
+configured safety floor just to save money.
+</details>
+
+<details>
+<summary><b>Scenario D: prompt injection, blocked before spend</b></summary>
+
+`Security Gateway -> Quarantine -> Decision Log`
+
+Judge takeaway: unsafe input is stopped before cache lookup, model dispatch, or
+cloud/API spend.
+</details>
 
 Savings baseline = **all-cloud-frontier**: what every task *would* cost sent to
 a top cloud model (gemini-2.5-pro list price). It is never called — it's the

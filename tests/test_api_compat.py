@@ -82,3 +82,13 @@ def test_route_stream_returns_trace_events(monkeypatch):
     assert res.status_code == 200
     assert '"stage": "TRIAGED"' in body
     assert '"stage": "RESULT"' in body
+
+
+def test_architecture_page_serves_interactive_map():
+    client = TestClient(proxy_app.app)
+    res = client.get("/architecture")
+
+    assert res.status_code == 200
+    assert "Interactive Architecture" in res.text
+    assert "Scenario Simulator" in res.text
+    assert "/imgs/logos/qwen.png" in res.text
