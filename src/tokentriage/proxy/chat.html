@@ -214,8 +214,8 @@
     color:var(--muted);
     font:11px/1.2 var(--mono);
   }
-  .history-delete,
-  .history-edit{
+  .history-menu-wrap{ position:relative; }
+  .history-menu-btn{
     width:24px;
     height:24px;
     display:grid;
@@ -226,18 +226,50 @@
     color:var(--muted);
     font:900 13px/1 var(--sans);
     text-decoration:none;
+    margin-right:4px;
   }
-  .history-delete{ font:900 15px/1 var(--mono); margin-right:4px; }
-  .history-delete:hover{
-    border-color:color-mix(in srgb, var(--pro) 38%, var(--rule));
-    color:var(--pro);
-    background:color-mix(in srgb, var(--pro) 8%, transparent);
+  .history-menu-btn:hover{
+    color:var(--ink);
+    background:color-mix(in srgb, var(--ink) 8%, transparent);
   }
-  .history-edit:hover{
-    border-color:color-mix(in srgb, var(--qwen) 38%, var(--rule));
-    color:var(--qwen);
-    background:color-mix(in srgb, var(--qwen) 8%, transparent);
+  .history-dropdown{
+    position:absolute;
+    right:0;
+    top:28px;
+    background:var(--panel);
+    border:1px solid var(--rule);
+    border-radius:8px;
+    box-shadow:var(--shadow);
+    display:none;
+    flex-direction:column;
+    min-width:120px;
+    padding:4px;
+    z-index:100;
   }
+  .history-dropdown.is-open{ display:flex; }
+  .history-dropdown a{
+    display:block;
+    padding:6px 8px;
+    color:var(--ink);
+    text-decoration:none;
+    font:500 12px/1.2 var(--sans);
+    border-radius:6px;
+  }
+  .history-dropdown a:hover{ background:var(--panel-2); }
+  .history-dropdown a.is-danger{ color:var(--pro); }
+  .history-dropdown a.is-danger:hover{ background:color-mix(in srgb, var(--pro) 8%, transparent); }
+  .history-rename-input{
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    color: var(--ink);
+    font: 700 12px/1.2 var(--sans);
+    padding: 2px 4px;
+    outline: none;
+    margin: -3px -5px;
+  }
+  .history-rename-input:focus{ border-color:var(--qwen); }
   .hist-empty{
     color:var(--muted);
     padding:12px 4px;
@@ -1987,11 +2019,19 @@ async function refreshHistory(){
     list.innerHTML = items.map(it => `
       <div class="history-item ${it.id===convId?'is-active':''}">
         <a class="history-load" href="#" data-load="${esc(it.id)}">
-          <b>${esc(it.title || 'Untitled')}</b>
+          <b>${it.is_pinned ? '📌 ' : ''}${esc(it.title || 'Untitled')}</b>
           <span>${it.n} msgs · ${new Date((it.updated_at||0)*1000).toLocaleDateString()}</span>
         </a>
-        <a href="#" class="history-edit" data-edit="${esc(it.id)}" data-title="${esc(it.title || '')}" aria-label="Rename">✎</a>
-        <a href="#" class="history-delete" data-del="${esc(it.id)}" aria-label="Delete ${esc(it.title || 'conversation')}">x</a>
+        <div class="history-menu-wrap">
+          <a href="#" class="history-menu-btn" aria-label="Menu">•••</a>
+          <div class="history-dropdown">
+            <a href="#" data-rename="${esc(it.id)}" data-title="${esc(it.title || '')}">Rename</a>
+            <a href="#" data-pin="${esc(it.id)}" data-pinned="${it.is_pinned}">
+              ${it.is_pinned ? 'Unpin' : 'Pin'}
+            </a>
+            <a href="#" class="is-danger" data-del="${esc(it.id)}">Delete</a>
+          </div>
+        </div>
       </div>`).join('');
   }catch(e){
     count.textContent = '';
@@ -2025,33 +2065,93 @@ async function delConversation(id){
   }
   refreshHistory();
 }
+document.addEventListener('click', e => {
+  if(!e.target.closest('.history-menu-wrap')) {
+    document.querySelectorAll('.history-dropdown').forEach(d => d.classList.remove('is-open'));
+  }
+});
+
 document.getElementById('historyList').addEventListener('click', async e => {
   const load = e.target.closest('[data-load]');
-  if(load){
+  if(load && e.target.tagName !== 'INPUT'){
     e.preventDefault();
     await loadConversation(load.dataset.load);
     return;
   }
-  const edit = e.target.closest('[data-edit]');
-  if(edit){
+
+  const menuBtn = e.target.closest('.history-menu-btn');
+  if(menuBtn){
     e.preventDefault();
-    const newTitle = prompt('Enter a new name for this chat:', edit.dataset.title);
-    if(newTitle && newTitle.trim()){
-      try{
-        await fetch('/conversations/' + encodeURIComponent(edit.dataset.edit), {
-          method:'PATCH',
-          headers:{'content-type':'application/json'},
-          body: JSON.stringify({title: newTitle.trim()})
-        });
-        refreshHistory();
-      }catch(e){}
-    }
+    document.querySelectorAll('.history-dropdown').forEach(d => {
+      if(d !== menuBtn.nextElementSibling) d.classList.remove('is-open');
+    });
+    menuBtn.nextElementSibling.classList.toggle('is-open');
     return;
   }
-  const del = e.target.closest('[data-del]');
-  if(del){
+
+  const renameBtn = e.target.closest('[data-rename]');
+  if(renameBtn){
     e.preventDefault();
-    if(confirm('Delete this conversation?')) await delConversation(del.dataset.del);
+    const wrap = renameBtn.closest('.history-item');
+    const loadLink = wrap.querySelector('.history-load');
+    const bTag = loadLink.querySelector('b');
+    bTag.style.display = 'none';
+    
+    let input = loadLink.querySelector('.history-rename-input');
+    if(!input){
+      input = document.createElement('input');
+      input.className = 'history-rename-input';
+      input.value = renameBtn.dataset.title;
+      loadLink.insertBefore(input, bTag);
+      
+      const saveTitle = async () => {
+        const newTitle = input.value.trim();
+        if(newTitle && newTitle !== renameBtn.dataset.title) {
+          try {
+            await fetch('/conversations/' + encodeURIComponent(renameBtn.dataset.rename), {
+              method:'PATCH', headers:{'content-type':'application/json'},
+              body: JSON.stringify({title: newTitle})
+            });
+            refreshHistory();
+          }catch(e){}
+        } else {
+          input.remove();
+          bTag.style.display = '';
+        }
+      };
+      
+      input.addEventListener('blur', saveTitle);
+      input.addEventListener('keydown', ev => {
+        if(ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+        if(ev.key === 'Escape') { 
+          input.value = renameBtn.dataset.title; // revert
+          input.blur();
+        }
+      });
+    }
+    renameBtn.closest('.history-dropdown').classList.remove('is-open');
+    input.focus();
+    return;
+  }
+
+  const pinBtn = e.target.closest('[data-pin]');
+  if(pinBtn){
+    e.preventDefault();
+    const isPinned = pinBtn.dataset.pinned === '1';
+    try {
+      await fetch('/conversations/' + encodeURIComponent(pinBtn.dataset.pin) + '/pin', {
+        method:'PATCH', headers:{'content-type':'application/json'},
+        body: JSON.stringify({is_pinned: !isPinned ? 1 : 0})
+      });
+      refreshHistory();
+    }catch(e){}
+    return;
+  }
+
+  const delBtn = e.target.closest('[data-del]');
+  if(delBtn){
+    e.preventDefault();
+    if(confirm('Delete this conversation?')) await delConversation(delBtn.dataset.del);
     return;
   }
 });

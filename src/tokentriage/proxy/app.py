@@ -245,6 +245,13 @@ async def conversations_rename(conv_id: str, request: Request):
     return {"ok": True}
 
 
+@app.patch("/conversations/{conv_id}/pin")
+async def conversations_pin(conv_id: str, request: Request):
+    body = await request.json()
+    db.pin_conversation(conv_id, int(bool(body.get("is_pinned"))))
+    return {"ok": True}
+
+
 @app.delete("/conversations/{conv_id}")
 def conversations_delete(conv_id: str):
     db.delete_conversation(conv_id)

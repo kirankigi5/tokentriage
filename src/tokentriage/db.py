@@ -73,7 +73,8 @@ CREATE TABLE IF NOT EXISTS conversations (
     id TEXT PRIMARY KEY,
     created_at REAL NOT NULL,
     updated_at REAL NOT NULL,
-    title TEXT
+    title TEXT,
+    is_pinned INTEGER DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS conv_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -118,6 +119,10 @@ def conn():
 def init_db() -> None:
     with conn() as c:
         c.executescript(_SCHEMA)
+        try:
+            c.execute("ALTER TABLE conversations ADD COLUMN is_pinned INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
         for tier, tt, acc in _SEED_BENCHMARKS:
             c.execute(
                 "INSERT OR IGNORE INTO benchmarks (model_tier, task_type, accuracy, samples)"
@@ -214,12 +219,17 @@ def rename_conversation(conv_id: str, title: str) -> None:
         c.execute("UPDATE conversations SET title = ? WHERE id = ?", (title, conv_id))
 
 
+def pin_conversation(conv_id: str, is_pinned: int) -> None:
+    with conn() as c:
+        c.execute("UPDATE conversations SET is_pinned = ? WHERE id = ?", (is_pinned, conv_id))
+
+
 def list_conversations(limit: int = 50) -> list[dict]:
     with conn() as c:
         rows = c.execute(
-            """SELECT c.id, c.title, c.updated_at,
+            """SELECT c.id, c.title, c.updated_at, c.is_pinned,
                       (SELECT COUNT(*) FROM conv_messages m WHERE m.conversation_id=c.id) AS n
-               FROM conversations c ORDER BY c.updated_at DESC LIMIT ?""",
+               FROM conversations c ORDER BY c.is_pinned DESC, c.updated_at DESC LIMIT ?""",
             (limit,)).fetchall()
     return [dict(r) for r in rows]
 
