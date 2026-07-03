@@ -8,11 +8,12 @@ cost by 98.1% versus sending every task to a frontier Gemini model."
 ## 2. Start The Judge UI
 
 ```bash
-chainlit run demo_chainlit.py
+tokentriage serve
+open http://localhost:8000/chat
 ```
 
-Show the scenario buttons and explain that every request displays the live
-routing pipeline.
+Show the chat, left-side history, routing stack, and dashboard link. Explain that
+every request displays the live routing pipeline directly under the answer.
 
 ## 3. Run Four Scenarios
 
@@ -24,22 +25,17 @@ routing pipeline.
 For each successful request, point at the visible steps and final receipt:
 chosen tier, cost, baseline, savings, cache hit, verifier status.
 
-## 4. Show The Ledger
+## 4. Show The Dashboard
+
+Open the dashboard after running the scenarios. Show total spend, always-frontier
+baseline, savings, tier utilization, cache hits, escalations, and recent
+routing decisions.
 
 ```bash
-tokentriage serve
 open http://localhost:8000/dashboard
 ```
 
-Show total spend, always-frontier baseline, savings, tier utilization, cache
-hits, escalations, and recent routing decisions.
-
 ## 5. Show The Evidence Report
 
-```bash
-tokentriage evidence
-open reports/latest/dashboard.html
-```
-
-Close by emphasizing that the report is generated from the same routing path as
-the live API.
+Run `tokentriage evidence`. Close by emphasizing that the report is generated
+from the same routing path as the live API.

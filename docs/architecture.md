@@ -9,7 +9,7 @@
 Simple to state; the engineering is in making each input to that function
 trustworthy: triage supplies the task type, the MCP server supplies measured
 per-type accuracy (learned, not assumed), the policy supplies the floor and
-overrides, and the budget ledger supplies the constraint.
+overrides, and the budget dashboard supplies the constraint.
 
 ## Request lifecycle (state machine)
 

@@ -196,8 +196,7 @@ def save_conversation(conv_id: str, messages: list[dict], title: str | None = No
         c.execute(
             """INSERT INTO conversations (id, created_at, updated_at, title)
                VALUES (?,?,?,?)
-               ON CONFLICT(id) DO UPDATE SET updated_at=excluded.updated_at,
-                                             title=excluded.title""",
+               ON CONFLICT(id) DO UPDATE SET updated_at=excluded.updated_at""",
             (conv_id, now, now, title))
         c.execute("DELETE FROM conv_messages WHERE conversation_id=?", (conv_id,))
         for m in messages:
@@ -208,6 +207,11 @@ def save_conversation(conv_id: str, messages: list[dict], title: str | None = No
                 (conv_id, now, m.get("role", "user"), m.get("content", ""),
                  json.dumps(extra) if extra else None))
     return conv_id
+
+
+def rename_conversation(conv_id: str, title: str) -> None:
+    with conn() as c:
+        c.execute("UPDATE conversations SET title = ? WHERE id = ?", (title, conv_id))
 
 
 def list_conversations(limit: int = 50) -> list[dict]:

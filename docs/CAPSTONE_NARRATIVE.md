@@ -31,6 +31,6 @@ policy, budget, cache, and escalation so cost control remains predictable.
 
 ## Demo Story
 
-The Chainlit demo shows the full routing pipeline as visible steps. Judges see
-security, cache, triage, MCP pricing, policy routing, dispatch, verification,
-and savings receipt for every request.
+The custom chat demo shows the full routing pipeline as visible steps. Judges
+see security, cache, triage, MCP pricing, policy routing, dispatch,
+verification, and savings receipt for every request.

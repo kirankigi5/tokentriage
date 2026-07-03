@@ -65,3 +65,20 @@ def test_gemini_generate_content_quarantines_injection(monkeypatch):
     assert res.status_code == 400
     assert res.json()["error"]["message"] == "request_quarantined_prompt_injection"
     assert called is False
+
+
+def test_route_stream_returns_trace_events(monkeypatch):
+    def fake_route(task, policy, cache, messages=None, on_event=None):
+        on_event("TRIAGED", {"task_type": "factual_lookup", "detail": "lookup"})
+        return DummyResult()
+
+    monkeypatch.setattr(proxy_app, "route", fake_route)
+    client = TestClient(proxy_app.app)
+    with client.stream("POST", "/v1/route/stream", json={
+        "messages": [{"role": "user", "content": "hi"}]
+    }) as res:
+        body = "".join(res.iter_text())
+
+    assert res.status_code == 200
+    assert '"stage": "TRIAGED"' in body
+    assert '"stage": "RESULT"' in body

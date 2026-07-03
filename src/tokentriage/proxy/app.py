@@ -19,6 +19,7 @@ import threading
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 
 from tokentriage import db
 from tokentriage.agents.orchestrator import route
@@ -29,6 +30,11 @@ from tokentriage.models.registry import TIERS
 from tokentriage.security.gateway import RateLimiter, SecurityError, gateway_check
 
 app = FastAPI(title="TokenTriage — Inference Cost Engine")
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_IMGS_DIR = _REPO_ROOT / "imgs"
+if _IMGS_DIR.exists():
+    app.mount("/imgs", StaticFiles(directory=_IMGS_DIR), name="imgs")
 
 _policy: dict = {}
 _cache: SemanticCache | None = None
@@ -228,6 +234,15 @@ async def conversations_save(request: Request):
 @app.get("/conversations/{conv_id}")
 def conversations_get(conv_id: str):
     return {"id": conv_id, "messages": db.get_conversation(conv_id)}
+
+
+@app.patch("/conversations/{conv_id}")
+async def conversations_rename(conv_id: str, request: Request):
+    body = await request.json()
+    if not body.get("title"):
+        return JSONResponse(status_code=400, content={"error": "title required"})
+    db.rename_conversation(conv_id, body["title"])
+    return {"ok": True}
 
 
 @app.delete("/conversations/{conv_id}")

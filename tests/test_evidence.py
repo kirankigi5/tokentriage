@@ -49,9 +49,3 @@ def test_run_evidence_writes_expected_artifacts(tmp_path, monkeypatch):
     assert (run_dir / "routing_results.csv").exists()
     assert (run_dir / "dashboard.html").exists()
     assert (tmp_path / "reports" / "latest" / "dashboard.html").exists()
-
-
-def test_chainlit_demo_imports_without_running_server():
-    import demo_chainlit
-
-    assert demo_chainlit.SCENARIOS

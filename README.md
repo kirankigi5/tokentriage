@@ -38,18 +38,18 @@ open reports/latest/dashboard.html
 
 ## Judge demo
 
-The primary demo UI is a Chainlit app inspired by last year's VeganFlow winner:
-each request shows visible agent/tool steps instead of hiding the routing
-pipeline.
+The primary demo UI is TokenTriage's own gateway playground. Each request shows
+the final answer plus a visible routing chain: security, cache, triage, policy,
+dispatch, verification, and savings receipt.
 
 ```bash
-chainlit run demo_chainlit.py
+tokentriage serve            # http://localhost:8000/chat
 ```
 
-The FastAPI gateway and ledger still run as production infrastructure:
+The dashboard remains available from the same server:
 
 ```bash
-tokentriage serve            # http://localhost:8000/dashboard
+open http://localhost:8000/dashboard
 tokentriage demo             # seed curated dashboard traffic
 ```
 
@@ -122,7 +122,7 @@ yardstick. See `docs/architecture.md` for full design rationale.
 | MCP Server | `src/tokentriage/mcp_server/server.py` — custom pricing/benchmark/budget/log tools |
 | Security features | `src/tokentriage/security/` — gateway, injection screen, budget circuit breaker, key isolation, sensitive-task backstop |
 | API compatibility | OpenAI `/v1/chat/completions` + Gemini `/v1beta/models/{model}:generateContent` |
-| Deployability | FastAPI gateway (`proxy/app.py`), Dockerfile, Chainlit judge UI |
+| Deployability | FastAPI gateway (`proxy/app.py`), custom chat UI, dashboard, Dockerfile |
 | Agent skills (CLI) | `src/tokentriage/cli.py` — serve / benchmark / eval / report / evidence / demo / tune / adk-demo / attack-test |
 | Antigravity | Built in the Antigravity IDE (see video) |
 
@@ -140,17 +140,14 @@ ollama pull qwen2.5:7b
 ollama pull qwen2.5:14b
 ollama pull nomic-embed-text
 
-# 2. Install TokenTriage (Python 3.11-3.13; Chainlit is not yet reliable on 3.14)
+# 2. Install TokenTriage (Python 3.11+)
 pip install -e .
 
 # 3. (optional) configure — defaults already run fully local
 cp .env.example .env
 
-# 4. Run the gateway + dashboard
+# 4. Run the gateway + chat/dashboard
 tokentriage serve            # http://localhost:8000  ·  /dashboard
-
-# 4b. Or run the judge-facing Chainlit demo
-chainlit run demo_chainlit.py
 
 # 5. Point any OpenAI-compatible client at it
 #    base_url="http://localhost:8000/v1"   (the `model` field is ignored —

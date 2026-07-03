@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TokenTriage - Ledger</title>
+<title>TokenTriage - Dashboard</title>
 <style>
   :root{
     color-scheme:light;
@@ -116,6 +116,11 @@
     font:800 12px/1 var(--mono);
     cursor:pointer;
   }
+  .link-button.is-active{
+    border-color:color-mix(in srgb, var(--cache) 46%, var(--rule));
+    color:var(--cache);
+    background:color-mix(in srgb, var(--cache) 8%, var(--panel));
+  }
   .stamp{
     height:36px;
     min-width:112px;
@@ -127,7 +132,7 @@
     background:color-mix(in srgb, var(--cache) 8%, var(--panel));
     font:800 12px/1 var(--mono);
   }
-  .ledger-shell{
+  .dashboard-shell{
     min-height:0;
     display:grid;
     grid-template-rows:auto auto 1fr;
@@ -280,6 +285,17 @@
     background:linear-gradient(135deg,var(--accent),color-mix(in srgb, var(--accent) 62%, black));
     box-shadow:inset 0 0 0 1px rgba(255,255,255,.24);
     font:900 13px/1 var(--mono);
+  }
+  .model-logo img,
+  .tiny-logo img{
+    width:72%;
+    height:72%;
+    object-fit:contain;
+    display:block;
+    background:white;
+    border-radius:6px;
+    padding:2px;
+    box-shadow:0 0 0 1px rgba(255,255,255,.6);
   }
   .model-copy{
     min-width:0;
@@ -443,19 +459,20 @@
     <div class="brand">
       <div class="brand-mark">TT</div>
       <div>
-        <h1>TokenTriage Ledger</h1>
+        <h1>TokenTriage Dashboard</h1>
         <p>spend, cache, verification, and model routing</p>
       </div>
     </div>
     <div class="top-actions">
       <a class="link-button" href="/chat">Chat</a>
+      <a class="link-button is-active" href="/dashboard">Dashboard</a>
       <button class="link-button" type="button" id="refresh">Refresh</button>
       <span class="stamp" id="stamp">Connecting</span>
     </div>
   </header>
 
-  <main class="ledger-shell">
-    <section class="hero" aria-label="Ledger summary">
+  <main class="dashboard-shell">
+    <section class="hero" aria-label="Dashboard summary">
       <div class="hero-main">
         <div class="metric">
           <span>Requests 24h</span>
@@ -500,9 +517,9 @@
       <div class="model-grid" id="models"></div>
     </section>
 
-    <section class="feed-wrap" aria-label="Decision ledger">
+    <section class="feed-wrap" aria-label="Decision dashboard">
       <table>
-        <caption>Decision Feed - most recent first</caption>
+        <caption>Decision Dashboard - most recent first</caption>
         <thead>
           <tr>
             <th>Task</th>
@@ -523,10 +540,10 @@
 <script>
 const DAILY_CAP = 5.00;
 const MODEL_STACK = [
-  {tier:'T0', name:'Nomic Embed', detail:'semantic cache', logo:'NE', accent:'var(--cache)'},
-  {tier:'T1', name:'Qwen 2.5', detail:'3B local', logo:'Q3', accent:'var(--cache)'},
-  {tier:'T2', name:'Qwen 2.5', detail:'7B local', logo:'Q7', accent:'var(--qwen)'},
-  {tier:'T3', name:'Qwen 2.5', detail:'14B local', logo:'Q14', accent:'var(--pro)'},
+  {tier:'T0', name:'Nomic Embed', detail:'semantic cache', logo:'NE', img:'/imgs/logos/nomic.png', accent:'var(--cache)'},
+  {tier:'T1', name:'Qwen 2.5', detail:'3B local', logo:'Q3', img:'/imgs/logos/qwen.png', accent:'var(--cache)'},
+  {tier:'T2', name:'Qwen 2.5', detail:'7B local', logo:'Q7', img:'/imgs/logos/qwen.png', accent:'var(--qwen)'},
+  {tier:'T3', name:'Qwen 2.5', detail:'14B local', logo:'Q14', img:'/imgs/logos/qwen.png', accent:'var(--pro)'},
 ];
 
 const el = id => document.getElementById(id);
@@ -548,6 +565,10 @@ function modelForTier(tier){
   };
 }
 
+function logoHtml(model){
+  return model.img ? `<img src="${esc(model.img)}" alt="" loading="lazy">` : esc(model.logo);
+}
+
 function renderModels(util, requests){
   const total = Math.max(1, Number(requests || 0));
   const maxCount = Math.max(1, ...MODEL_STACK.map(m => Number((util || {})[m.tier] || 0)));
@@ -557,7 +578,7 @@ function renderModels(util, requests){
     const pct = 100 * count / total;
     const width = 100 * count / maxCount;
     return `<div class="model-row ${count ? 'is-active' : ''}" style="--accent:${m.accent}">
-      <div class="model-logo">${esc(m.logo)}</div>
+      <div class="model-logo">${logoHtml(m)}</div>
       <div class="model-copy">
         <b>${esc(m.name)}</b>
         <span>${esc(m.tier)} · ${esc(m.detail)}</span>
@@ -592,7 +613,7 @@ function renderFeed(rows){
       <td><span class="pill">${esc(type)}</span></td>
       <td>
         <div class="tier-cell" style="--accent:${model.accent}">
-          <div class="tiny-logo">${esc(model.logo)}</div>
+          <div class="tiny-logo">${logoHtml(model)}</div>
           <div class="tier-name">
             <b>${esc(r.chosen_tier || '')}${r.escalated_to ? ' -> ' + esc(r.escalated_to) : ''}</b>
             <span>${esc(model.detail)}</span>

@@ -11,7 +11,7 @@ accuracy clears policy.
 The benchmark workload contains business tasks across factual lookup,
 classification, summarization, creative writing, reasoning, code generation,
 and legal/financial review. Each task is routed through the same production
-pipeline used by the API and Chainlit demo.
+pipeline used by the API and custom chat demo.
 
 For every task, TokenTriage records:
 
