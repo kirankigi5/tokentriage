@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import typer
@@ -24,10 +25,15 @@ app = typer.Typer(help="TokenTriage — Inference Cost Engine", no_args_is_help=
 
 
 @app.command()
-def serve(host: str = settings.host, port: int = settings.port):
+def serve(host: str = settings.host, port: int = settings.port, judge_mode: bool = typer.Option(False, "--judge-mode", help="Seed DB with a precomputed judge trace before starting.")):
     """Start the OpenAI-compatible gateway and the /dashboard."""
     import uvicorn
-    db.init_db()
+    if judge_mode:
+        os.environ["TOKENTRIAGE_JUDGE_MODE"] = "1"
+        from tokentriage.demo.replay import seed_judge_data
+        seed_judge_data()
+    else:
+        db.init_db()
     typer.echo(f"TokenTriage gateway → http://{host}:{port}  ·  dashboard → /dashboard")
     uvicorn.run("tokentriage.proxy.app:app", host=host, port=port)
 

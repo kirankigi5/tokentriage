@@ -14,10 +14,11 @@ from pathlib import Path
 
 import asyncio
 import json
+import os
 import queue
 import threading
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -28,6 +29,7 @@ from tokentriage.config import load_policy
 from tokentriage.mcp_server import tools as mcp_tools
 from tokentriage.models.registry import TIERS
 from tokentriage.security.gateway import RateLimiter, SecurityError, gateway_check
+from tokentriage.demo.replay import seed_judge_data
 
 app = FastAPI(title="TokenTriage — Inference Cost Engine")
 
@@ -39,14 +41,39 @@ if _IMGS_DIR.exists():
 _policy: dict = {}
 _cache: SemanticCache | None = None
 _limiter = RateLimiter()
+_demo_index = 0
+_judge_mode = False
+
+
+def _decision_rows() -> list[dict]:
+    """Return decisions ordered by timestamp as a list of dicts."""
+    with db.conn() as c:
+        rows = c.execute(
+            "SELECT id, ts, task_id, task_preview, task_type, chosen_tier, cost_usd FROM decisions ORDER BY ts"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def _conversation_for_task_preview(preview: str) -> list[dict] | None:
+    """Try to find a conversation whose first message content matches the preview."""
+    with db.conn() as c:
+        row = c.execute(
+            "SELECT conversation_id FROM conv_messages WHERE role='user' AND content LIKE ? ORDER BY id LIMIT 1",
+            (preview[:120] + '%',),
+        ).fetchone()
+        if not row:
+            return None
+        conv_id = row["conversation_id"]
+    return db.get_conversation(conv_id)
 
 
 @app.on_event("startup")
 def _startup() -> None:
-    global _policy, _cache
+    global _policy, _cache, _judge_mode
     db.init_db()
     _policy = load_policy()
     _cache = SemanticCache(_policy)
+    _judge_mode = os.getenv("TOKENTRIAGE_JUDGE_MODE", "").lower() in ("1", "true", "yes")
 
 
 def _tt_meta(result) -> dict:
@@ -269,6 +296,68 @@ def api_stats(window_hours: float = 24.0):
 def dashboard():
     html = Path(__file__).parent / "dashboard.html"
     return html.read_text()
+
+
+def _ensure_judge_mode():
+    if not _judge_mode:
+        raise HTTPException(status_code=404, detail="demo replay unavailable")
+
+
+@app.post("/demo/replay/reset")
+def demo_replay_reset():
+    """Re-seed the DB from `benchmarks/judge_trace.jsonl` and reset the in-memory pointer."""
+    _ensure_judge_mode()
+    seed_judge_data()
+    global _demo_index
+    _demo_index = 0
+    return {"ok": True, "message": "judge trace seeded", "items": len(_decision_rows())}
+
+
+@app.get("/demo/replay/list")
+def demo_replay_list():
+    """List seeded replay decisions (id, ts, task_preview, task_type, chosen_tier)."""
+    _ensure_judge_mode()
+    rows = _decision_rows()
+    return {"count": len(rows), "items": [{"idx": i, "id": r["id"], "ts": r["ts"], "task_preview": r["task_preview"], "task_type": r["task_type"], "chosen_tier": r["chosen_tier"]} for i, r in enumerate(rows)]}
+
+
+@app.get("/demo/replay/item/{idx}")
+def demo_replay_item(idx: int):
+    """Return the decision at index `idx` and its conversation messages (if found)."""
+    _ensure_judge_mode()
+    rows = _decision_rows()
+    if idx < 0 or idx >= len(rows):
+        return JSONResponse(status_code=404, content={"error": "index out of range"})
+    r = rows[idx]
+    conv = _conversation_for_task_preview(r.get("task_preview", ""))
+    return {"index": idx, "decision": r, "conversation": conv}
+
+
+@app.get("/demo/replay/next")
+def demo_replay_next():
+    _ensure_judge_mode()
+    global _demo_index
+    rows = _decision_rows()
+    if not rows:
+        return JSONResponse(status_code=404, content={"error": "no replay items seeded"})
+    _demo_index = min(_demo_index + 1, len(rows) - 1)
+    return demo_replay_item(_demo_index)
+
+
+@app.get("/demo/replay/prev")
+def demo_replay_prev():
+    _ensure_judge_mode()
+    global _demo_index
+    rows = _decision_rows()
+    if not rows:
+        return JSONResponse(status_code=404, content={"error": "no replay items seeded"})
+    _demo_index = max(_demo_index - 1, 0)
+    return demo_replay_item(_demo_index)
+
+
+@app.get("/api/config")
+def api_config():
+    return {"judge_mode": _judge_mode}
 
 
 @app.get("/architecture", response_class=HTMLResponse)

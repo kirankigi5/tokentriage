@@ -15,10 +15,9 @@
     --rule:#d7d0c2;
     --cache:#168a68;
     --qwen:#385acb;
-    --qwen-2:#6f46c8;
     --pro:#c24a3a;
     --verify:#a66b11;
-    --shadow:0 18px 55px rgba(28,32,28,.12);
+    --shadow:0 18px 55px rgba(28,32,28,.10);
     --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
     --sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   }
@@ -33,14 +32,13 @@
       --rule:#3b382f;
       --cache:#46c59c;
       --qwen:#7f9aff;
-      --qwen-2:#ac84ff;
       --pro:#ff846f;
       --verify:#e1a540;
-      --shadow:0 18px 55px rgba(0,0,0,.35);
+      --shadow:0 18px 55px rgba(0,0,0,.30);
     }
   }
   *{box-sizing:border-box}
-  html,body{min-height:100%;margin:0}
+  html,body{height:100%;margin:0}
   body{
     background:
       linear-gradient(90deg, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px) 0 0/42px 42px,
@@ -48,40 +46,36 @@
       linear-gradient(135deg, color-mix(in srgb, var(--cache) 7%, transparent), transparent 34%),
       var(--paper);
     color:var(--ink);
-    font:15px/1.5 var(--sans);
-    padding:22px;
+    font:14px/1.45 var(--sans);
+    overflow:hidden;
+    padding:14px;
   }
   a{color:inherit}
+  button,select,input{font:inherit}
   .shell{
-    width:min(1180px,100%);
-    min-height:calc(100vh - 44px);
+    width:min(1500px,100%);
+    height:calc(100dvh - 28px);
+    min-height:0;
     margin:0 auto;
     display:grid;
     grid-template-columns:236px minmax(0,1fr);
-    gap:16px;
+    gap:12px;
   }
   .sidebar{
     min-height:0;
     display:grid;
     grid-template-rows:auto auto auto 1fr auto;
     gap:12px;
-    padding:14px;
+    padding:12px;
     border:1px solid var(--rule);
     border-radius:12px;
     background:color-mix(in srgb, var(--panel) 94%, transparent);
   }
-  .topbar{
-    min-height:58px;
-    display:flex;
-    align-items:center;
-    justify-content:flex-start;
-    gap:24px;
-  }
   .brand{
-    min-width:0;
     display:flex;
     align-items:center;
-    gap:12px;
+    gap:10px;
+    min-width:0;
   }
   .brand-mark{
     width:36px;
@@ -100,15 +94,12 @@
     color:var(--muted);
     font:11px/1.2 var(--mono);
   }
-  .sidebar-nav{
-    display:grid;
-    gap:4px;
-  }
-  .link-button{
+  .link-button,
+  .tab-button,
+  .refresh-button{
+    min-width:0;
     height:36px;
-    min-width:84px;
-    padding:0 12px;
-    display:inline-grid;
+    display:grid;
     place-items:center;
     border:1px solid var(--rule);
     border-radius:8px;
@@ -118,160 +109,220 @@
     font:800 12px/1 var(--mono);
     cursor:pointer;
   }
+  .link-button:hover,
+  .tab-button:hover,
+  .refresh-button:hover{background:var(--panel-2)}
   .link-button.primary{
-    width:100%;
-    height:36px;
-    border-color:color-mix(in srgb, var(--ink) 38%, var(--rule));
-    background:color-mix(in srgb, var(--ink) 8%, var(--panel));
-    color:var(--ink);
+    border-color:var(--ink);
+    background:var(--ink);
+    color:var(--paper);
   }
-  .link-button:hover{
-    background:var(--panel-2);
-  }
-  .link-button.primary:hover{
-    background:color-mix(in srgb, var(--ink) 12%, var(--panel));
-  }
-  .link-button.is-active{
+  .link-button.is-active,
+  .tab-button.is-active{
     border-color:color-mix(in srgb, var(--cache) 46%, var(--rule));
     color:var(--cache);
     background:color-mix(in srgb, var(--cache) 8%, var(--panel));
   }
-  .stamp{
-    height:36px;
-    min-width:112px;
+  .sidebar-nav,
+  .dashboard-nav{
     display:grid;
-    place-items:center;
-    border:1px solid color-mix(in srgb, var(--cache) 46%, var(--rule));
-    border-radius:8px;
-    color:var(--cache);
-    background:color-mix(in srgb, var(--cache) 8%, var(--panel));
-    font:800 12px/1 var(--mono);
-  }
-  .dashboard-shell{
-    min-height:0;
-    display:grid;
-    grid-template-rows:auto auto 1fr;
-    border:1px solid var(--rule);
-    border-radius:12px;
-    background:color-mix(in srgb, var(--panel) 94%, transparent);
-    box-shadow:var(--shadow);
-    overflow:hidden;
-  }
-  .hero{
-    display:grid;
-    gap:1px;
-    background:var(--rule);
-  }
-  .side-panels{
-    display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:1px;
-    background:var(--rule);
-  }
-  .hero-main,
-  .budget-panel{
-    background:var(--panel);
-    padding:18px;
-  }
-  .hero-main{
-    display:grid;
-    grid-template-columns:repeat(6,minmax(0,1fr));
-    gap:1px;
-    background:
-      linear-gradient(135deg, color-mix(in srgb, var(--cache) 8%, transparent), transparent 42%),
-      var(--rule);
-  }
-  .metric{
-    min-width:0;
-    min-height:96px;
-    display:grid;
-    align-content:center;
     gap:8px;
-    background:var(--panel);
-    padding:14px;
   }
-  .metric span,
-  .section-title span,
-  th{
+  .dashboard-nav{
+    padding-top:4px;
+    border-top:1px solid var(--rule);
+  }
+  .side-title{
+    margin:0 0 2px;
     color:var(--muted);
-    font:800 10px/1.1 var(--mono);
+    font:900 10px/1 var(--mono);
     text-transform:uppercase;
   }
-  .metric b{
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-    font:900 clamp(22px,3vw,34px)/1 var(--mono);
-    font-variant-numeric:tabular-nums;
-  }
-  .metric.save b{color:var(--cache)}
-  .metric.warn b{color:var(--verify)}
-  .budget-panel{
-    min-width:0;
-    display:grid;
-    align-content:space-between;
-    gap:18px;
-  }
-  .budget-top{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    gap:12px;
-  }
-  .budget-top b{
-    display:block;
-    margin-top:6px;
-    font:900 24px/1 var(--mono);
-    font-variant-numeric:tabular-nums;
-  }
-  .budget-cap{
-    color:var(--muted);
-    text-align:right;
-    font:800 12px/1.3 var(--mono);
-  }
-  .burn{
+  .side-foot{
     display:grid;
     gap:8px;
   }
-  .burn-track{
-    height:18px;
-    overflow:hidden;
-    border:1px solid var(--ink);
-    border-radius:8px;
-    background:color-mix(in srgb, var(--cache) 12%, var(--panel-2));
-  }
-  .burn-fill{
-    width:0%;
-    height:100%;
-    background:linear-gradient(90deg,var(--cache),color-mix(in srgb,var(--qwen) 42%,var(--cache)));
-    transition:width .45s ease, background .2s ease;
-  }
-  .burn.hot .burn-fill{
-    background:linear-gradient(90deg,var(--verify),var(--pro));
-  }
-  .burn-label{
-    display:flex;
-    justify-content:space-between;
+  .stamp{
     color:var(--muted);
-    font:800 11px/1 var(--mono);
+    text-align:center;
+    font:800 11px/1.2 var(--mono);
   }
-  .models{
+  .main{
+    min-height:0;
     display:grid;
+    grid-template-rows:auto auto minmax(0,1fr);
     gap:12px;
-    padding:16px 18px;
-    border-top:1px solid var(--rule);
-    background:var(--panel-2);
   }
-  .section-title{
+  .topbar{
+    min-height:54px;
     display:flex;
     align-items:center;
     justify-content:space-between;
     gap:12px;
+    padding:0 2px;
   }
-  .section-title b{
-    font:900 14px/1 var(--mono);
+  .title-block{
+    min-width:0;
   }
-  .model-grid{
+  .title-block h2{
+    margin:0;
+    font-size:22px;
+    line-height:1.05;
+    letter-spacing:0;
+  }
+  .title-block p{
+    margin:4px 0 0;
+    color:var(--muted);
+    font:12px/1.2 var(--mono);
+  }
+  .toolbar{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .select-wrap{
+    height:36px;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:var(--panel);
+    padding:0 10px;
+  }
+  .select-wrap span{
+    color:var(--muted);
+    font:900 10px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  select{
+    border:0;
+    outline:0;
+    background:transparent;
+    color:var(--ink);
+    font:800 12px/1 var(--mono);
+  }
+  .kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(6,minmax(0,1fr));
+    gap:10px;
+  }
+  .kpi{
+    min-width:0;
+    min-height:86px;
+    display:grid;
+    align-content:center;
+    gap:7px;
+    border:1px solid var(--rule);
+    border-radius:10px;
+    background:var(--panel);
+    padding:12px;
+    box-shadow:0 8px 24px rgba(28,32,28,.05);
+  }
+  .kpi span,
+  .section-head span,
+  th{
+    color:var(--muted);
+    font:900 10px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .kpi b{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font:900 clamp(18px,2.5vw,28px)/1 var(--mono);
+    font-variant-numeric:tabular-nums;
+  }
+  .kpi.save b{color:var(--cache)}
+  .kpi.warn b{color:var(--verify)}
+  .kpi.danger b{color:var(--pro)}
+  .view-shell{
+    min-height:0;
+    overflow:hidden;
+    border:1px solid var(--rule);
+    border-radius:12px;
+    background:color-mix(in srgb, var(--panel) 94%, transparent);
+    box-shadow:var(--shadow);
+  }
+  .view{
+    height:100%;
+    min-height:0;
+    overflow:auto;
+    padding:14px;
+  }
+  .view[hidden]{display:none}
+  .section-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:12px;
+  }
+  .section-grid.two{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  }
+  .panel{
+    min-width:0;
+    border:1px solid var(--rule);
+    border-radius:10px;
+    background:var(--panel);
+    overflow:hidden;
+  }
+  .panel.pad{padding:14px}
+  .section-head{
+    min-height:42px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    border-bottom:1px solid var(--rule);
+    padding:0 12px;
+  }
+  .section-head b{
+    font:900 13px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .summary-value{
+    display:block;
+    margin-top:8px;
+    font:900 26px/1 var(--mono);
+    font-variant-numeric:tabular-nums;
+  }
+  .summary-copy{
+    margin:8px 0 0;
+    color:var(--muted);
+    font-size:12px;
+  }
+  .burn{
+    display:grid;
+    gap:9px;
+    margin-top:14px;
+  }
+  .burn-track,
+  .bar{
+    height:10px;
+    overflow:hidden;
+    border-radius:999px;
+    background:color-mix(in srgb, var(--rule) 72%, transparent);
+  }
+  .burn-track{height:16px;border:1px solid var(--ink)}
+  .burn-fill,
+  .bar-fill{
+    width:0%;
+    height:100%;
+    border-radius:inherit;
+    background:linear-gradient(90deg,var(--cache),color-mix(in srgb,var(--qwen) 42%,var(--cache)));
+    transition:width .35s ease;
+  }
+  .burn.hot .burn-fill{background:linear-gradient(90deg,var(--verify),var(--pro))}
+  .burn-label{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    color:var(--muted);
+    font:800 11px/1 var(--mono);
+  }
+  .card-grid{
     display:grid;
     grid-template-columns:repeat(4,minmax(0,1fr));
     gap:10px;
@@ -280,32 +331,30 @@
     min-width:0;
     min-height:112px;
     display:grid;
-    grid-template-columns:48px minmax(0,1fr);
+    grid-template-columns:44px minmax(0,1fr);
     grid-template-rows:auto auto;
-    gap:9px 10px;
+    gap:8px 10px;
     align-items:center;
     border:1px solid var(--rule);
-    border-radius:8px;
+    border-radius:10px;
     background:var(--panel);
     padding:12px;
-    transition:transform .18s ease, border-color .18s ease, background .18s ease;
   }
   .model-row.is-active{
-    transform:translateY(-2px);
-    border-color:color-mix(in srgb, var(--accent) 68%, var(--rule));
-    background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 13%, var(--panel)), var(--panel));
+    border-color:color-mix(in srgb, var(--accent) 64%, var(--rule));
+    background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, var(--panel)), var(--panel));
   }
-  .model-logo{
-    width:48px;
-    height:48px;
+  .model-logo,
+  .tiny-logo{
     display:grid;
     place-items:center;
     border-radius:8px;
     color:white;
-    background:linear-gradient(135deg,var(--accent),color-mix(in srgb, var(--accent) 62%, black));
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.24);
-    font:900 13px/1 var(--mono);
+    background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 62%,black));
+    font:900 11px/1 var(--mono);
   }
+  .model-logo{width:44px;height:44px}
+  .tiny-logo{width:30px;height:30px;flex:0 0 30px}
   .model-logo img,
   .tiny-logo img{
     width:72%;
@@ -315,7 +364,6 @@
     background:white;
     border-radius:6px;
     padding:2px;
-    box-shadow:0 0 0 1px rgba(255,255,255,.6);
   }
   .model-copy{
     min-width:0;
@@ -327,11 +375,11 @@
     text-overflow:ellipsis;
     white-space:nowrap;
   }
-  .model-copy b{font-size:14px}
+  .model-copy b{font-size:13px}
   .model-copy span{
-    margin-top:2px;
+    margin-top:3px;
     color:var(--muted);
-    font:800 11px/1.2 var(--mono);
+    font:800 10px/1.2 var(--mono);
   }
   .model-count{
     grid-column:1/-1;
@@ -340,41 +388,56 @@
   }
   .model-count-row{
     display:flex;
-    align-items:center;
     justify-content:space-between;
     gap:8px;
     font:900 12px/1 var(--mono);
   }
-  .bar{
-    height:8px;
-    overflow:hidden;
-    border-radius:8px;
-    background:color-mix(in srgb, var(--rule) 72%, transparent);
-  }
-  .bar-fill{
-    width:0%;
-    height:100%;
-    border-radius:inherit;
-    background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 64%,var(--ink)));
-    transition:width .45s ease;
-  }
-  .feed-wrap{
-    min-height:0;
-    overflow:auto;
+  .task-card{
+    min-height:92px;
+    display:grid;
+    align-content:center;
+    gap:10px;
+    border:1px solid var(--rule);
+    border-radius:10px;
     background:var(--panel);
-    border-top:1px solid var(--rule);
+    padding:12px;
+  }
+  .task-card b{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font:900 13px/1 var(--mono);
+    text-transform:capitalize;
+  }
+  .task-card span{
+    color:var(--muted);
+    font:800 11px/1 var(--mono);
+  }
+  .table-tools{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px;
+    border-bottom:1px solid var(--rule);
+  }
+  .filter{
+    width:min(420px,100%);
+    height:36px;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:var(--paper);
+    color:var(--ink);
+    padding:0 10px;
+    outline:0;
+  }
+  .table-wrap{
+    overflow:auto;
   }
   table{
     width:100%;
     border-collapse:collapse;
     font-size:13px;
-  }
-  caption{
-    text-align:left;
-    padding:15px 18px 11px;
-    color:var(--muted);
-    font:800 10px/1 var(--mono);
-    text-transform:uppercase;
   }
   th,td{
     text-align:left;
@@ -382,13 +445,7 @@
     border-bottom:1px solid var(--rule);
     vertical-align:middle;
   }
-  th:first-child,
-  td:first-child{padding-left:18px}
-  th:last-child,
-  td:last-child{padding-right:18px}
-  td{
-    font-variant-numeric:tabular-nums;
-  }
+  td{font-variant-numeric:tabular-nums}
   .task-cell{
     min-width:260px;
     max-width:520px;
@@ -409,21 +466,10 @@
     gap:9px;
     min-width:118px;
   }
-  .tiny-logo{
-    width:32px;
-    height:32px;
-    display:grid;
-    place-items:center;
-    flex:0 0 32px;
-    border-radius:8px;
-    color:white;
-    background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 60%,black));
-    font:900 11px/1 var(--mono);
-  }
   .tier-name{
+    min-width:0;
     display:grid;
     gap:2px;
-    min-width:0;
   }
   .tier-name b,
   .tier-name span{
@@ -448,14 +494,21 @@
   .pill.fail{color:var(--pro);border-color:color-mix(in srgb,var(--pro) 38%,var(--rule))}
   .pill.warn{color:var(--verify);border-color:color-mix(in srgb,var(--verify) 38%,var(--rule))}
   .empty{
-    padding:28px 18px;
+    padding:22px;
     color:var(--muted);
     font:800 12px/1.4 var(--mono);
   }
-  @media (max-width:960px){
-    body{padding:12px}
+  @media (max-width:1180px){
+    .kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .section-grid,
+    .section-grid.two{grid-template-columns:1fr}
+    .card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (max-width:860px){
+    body{overflow:auto}
     .shell{
-      min-height:calc(100vh - 24px);
+      height:auto;
+      min-height:calc(100dvh - 28px);
       grid-template-columns:1fr;
     }
     .sidebar{
@@ -464,18 +517,18 @@
       flex-wrap:wrap;
       align-items:center;
     }
-    .hero-main{grid-template-columns:repeat(3,minmax(0,1fr))}
-    .side-panels{grid-template-columns:1fr}
-    .model-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .sidebar-nav,
+    .dashboard-nav{grid-template-columns:repeat(3,minmax(0,1fr));flex:1 1 420px}
+    .side-foot{flex:1 1 160px}
+    .main{min-height:760px}
   }
   @media (max-width:620px){
+    body{padding:10px}
     .topbar{align-items:flex-start;flex-direction:column}
-    .top-actions{width:100%;justify-content:stretch}
-    .link-button,.stamp{flex:1;min-width:0}
-    .hero-main{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .model-grid{grid-template-columns:1fr}
-    .metric{min-height:82px}
-    .task-cell{min-width:220px}
+    .toolbar,.table-tools{width:100%;align-items:stretch;flex-direction:column}
+    .select-wrap,.refresh-button,.filter{width:100%}
+    .kpi-grid,.card-grid{grid-template-columns:1fr}
+    .sidebar-nav,.dashboard-nav{grid-template-columns:1fr}
   }
   @media (prefers-reduced-motion:reduce){
     *{transition:none!important}
@@ -489,10 +542,10 @@
       <img class="brand-mark" src="/imgs/logos/app_logo.png" alt="TokenTriage">
       <div>
         <h1>TokenTriage</h1>
-        <p>local-first inference router</p>
+        <p>dashboard console</p>
       </div>
     </div>
-    
+
     <a class="link-button primary" href="/chat">New chat</a>
 
     <nav class="sidebar-nav" aria-label="Primary navigation">
@@ -500,128 +553,136 @@
       <a class="link-button is-active" href="/dashboard">Dashboard</a>
       <a class="link-button" href="/architecture">Architecture</a>
     </nav>
-    
-    <div style="margin-top:auto; display:grid; gap:8px">
-       <button class="link-button" type="button" id="refresh" style="width:100%">Refresh</button>
-       <div style="text-align:center">
-         <span class="stamp" id="stamp" style="border:none;background:transparent;width:100%;height:auto;min-width:0;font-size:11px;color:var(--muted)">Connecting</span>
-       </div>
+
+    <nav class="dashboard-nav" aria-label="Dashboard sections">
+      <div class="side-title">Sections</div>
+      <button class="tab-button is-active" type="button" data-view="overview">Overview</button>
+      <button class="tab-button" type="button" data-view="models">Models</button>
+      <button class="tab-button" type="button" data-view="tasks">Tasks</button>
+      <button class="tab-button" type="button" data-view="decisions">Decisions</button>
+    </nav>
+
+    <div class="side-foot">
+      <button class="refresh-button" type="button" id="refresh">Refresh</button>
+      <div class="stamp" id="stamp">Connecting</div>
     </div>
   </aside>
 
-  <main class="dashboard-shell">
-    <section class="hero" aria-label="Dashboard summary">
-      <div class="hero-main">
-        <div class="metric">
-          <span>Requests 24h</span>
-          <b id="req">0</b>
-        </div>
-        <div class="metric">
-          <span>TokenTriage Spend</span>
-          <b id="cost">$0.0000</b>
-        </div>
-        <div class="metric">
-          <span>Always-Pro Base</span>
-          <b id="base">$0.0000</b>
-        </div>
-        <div class="metric save">
-          <span>Savings</span>
-          <b id="save">0.0%</b>
-        </div>
-        <div class="metric">
-          <span>Cache Hit Rate</span>
-          <b id="cacheRate">0.0%</b>
-        </div>
-        <div class="metric">
-          <span>Escalation Rate</span>
-          <b id="escRate">0.0%</b>
-        </div>
-        <div class="metric">
-          <span>Avg Dispatch</span>
-          <b id="avgLatency">0 ms</b>
-        </div>
-        <div class="metric">
-          <span>P95 Dispatch</span>
-          <b id="p95Latency">0 ms</b>
-        </div>
+  <main class="main">
+    <header class="topbar">
+      <div class="title-block">
+        <h2>Dashboard</h2>
+        <p>Spend, latency, routing quality, cache, and verifier evidence</p>
       </div>
-      <div class="side-panels">
-        <aside class="budget-panel">
-          <div class="budget-top">
-            <div>
-              <span>Daily Budget Burn</span>
-              <b id="burnAmount">$0.0000</b>
-            </div>
-            <div class="budget-cap" id="burnCap">$5.0000 cap</div>
-          </div>
-          <div class="burn" id="burn">
-            <div class="burn-track"><div class="burn-fill" id="burnfill"></div></div>
-            <div class="burn-label">
-              <span id="burnPct">0.0%</span>
-              <span id="cacheEsc">0 cache / 0 escalations</span>
-            </div>
-          </div>
-        </aside>
-        <aside class="budget-panel">
-          <div class="budget-top">
-            <div>
-              <span>Security Guardrail</span>
-              <b id="quarantineCount" style="color:var(--pro)">0</b>
-            </div>
-            <div class="budget-cap" style="color:var(--pro)">quarantined</div>
-          </div>
-          <div class="burn">
-            <div class="burn-label" style="margin-top:14px;color:var(--pro)">Requests blocked for safety</div>
-          </div>
-        </aside>
-        <aside class="budget-panel">
-          <div class="budget-top">
-            <div>
-              <span>Verifier Accuracy</span>
-              <b id="verifierPassRate">0%</b>
-            </div>
-            <div class="budget-cap">pass rate</div>
-          </div>
-          <div class="burn">
-            <div class="burn-label" style="margin-top:14px;" id="verifierStats">0 pass / 0 fail</div>
-          </div>
-        </aside>
+      <div class="toolbar">
+        <label class="select-wrap">
+          <span>Window</span>
+          <select id="windowHours">
+            <option value="1">1h</option>
+            <option value="24" selected>24h</option>
+            <option value="168">7d</option>
+          </select>
+        </label>
       </div>
+    </header>
+
+    <section class="kpi-grid" aria-label="Key metrics">
+      <div class="kpi"><span>Requests</span><b id="req">0</b></div>
+      <div class="kpi"><span>Spend</span><b id="cost">$0.0000</b></div>
+      <div class="kpi"><span>Always-Pro Base</span><b id="base">$0.0000</b></div>
+      <div class="kpi save"><span>Savings</span><b id="save">0.0%</b></div>
+      <div class="kpi"><span>Avg Dispatch</span><b id="avgLatency">0 ms</b></div>
+      <div class="kpi warn"><span>P95 Dispatch</span><b id="p95Latency">0 ms</b></div>
     </section>
 
-    <section class="models" aria-label="Task Analytics">
-      <div class="section-title">
-        <b>Task Analytics</b>
-        <span id="taskTotal">0 tasks processed</span>
-      </div>
-      <div class="model-grid" id="taskGrid"></div>
-    </section>
+    <section class="view-shell">
+      <div class="view" id="view-overview">
+        <div class="section-grid">
+          <section class="panel pad">
+            <div class="section-head"><b>Budget</b><span id="burnCap">$5.00 cap</span></div>
+            <span class="summary-value" id="burnAmount">$0.0000</span>
+            <p class="summary-copy">Daily spend burn against the configured budget cap.</p>
+            <div class="burn" id="burn">
+              <div class="burn-track"><div class="burn-fill" id="burnfill"></div></div>
+              <div class="burn-label"><span id="burnPct">0.0%</span><span id="cacheEsc">0 cache / 0 escalations</span></div>
+            </div>
+          </section>
 
-    <section class="models" aria-label="Model utilization">
-      <div class="section-title">
-        <b>Local Model Utilization</b>
-        <span id="modelTotal">0 routed requests</span>
-      </div>
-      <div class="model-grid" id="models"></div>
-    </section>
+          <section class="panel pad">
+            <div class="section-head"><b>Guardrail</b><span>security</span></div>
+            <span class="summary-value" id="quarantineCount" style="color:var(--pro)">0</span>
+            <p class="summary-copy">Requests quarantined before cache lookup or model dispatch.</p>
+          </section>
 
-    <section class="feed-wrap" aria-label="Decision dashboard">
-      <table>
-        <caption>Decision Dashboard - most recent first</caption>
-        <thead>
-          <tr>
-            <th>Task</th>
-            <th>Type</th>
-            <th>Model</th>
-            <th>Cost</th>
-            <th>Latency</th>
-            <th>Verify</th>
-          </tr>
-        </thead>
-        <tbody id="feed">
-          <tr><td colspan="6"><div class="empty">Waiting for routing decisions.</div></td></tr>
-        </tbody>
-      </table>
+          <section class="panel pad">
+            <div class="section-head"><b>Verifier</b><span>quality</span></div>
+            <span class="summary-value" id="verifierPassRate">0%</span>
+            <p class="summary-copy" id="verifierStats">0 pass / 0 fail</p>
+          </section>
+        </div>
+
+        <div class="section-grid two" style="margin-top:12px">
+          <section class="panel pad">
+            <div class="section-head"><b>Cache Efficiency</b><span>T0</span></div>
+            <span class="summary-value" id="cacheRate">0.0%</span>
+            <p class="summary-copy">Semantic cache hit rate for the selected window.</p>
+          </section>
+          <section class="panel pad">
+            <div class="section-head"><b>Escalation Rate</b><span>verifier</span></div>
+            <span class="summary-value" id="escRate">0.0%</span>
+            <p class="summary-copy">Share of decisions escalated to a stronger tier.</p>
+          </section>
+        </div>
+      </div>
+
+      <div class="view" id="view-models" hidden>
+        <section class="panel">
+          <div class="section-head">
+            <b>Model Utilization</b>
+            <span id="modelTotal">0 routed requests</span>
+          </div>
+          <div class="card-grid" id="models" style="padding:12px"></div>
+        </section>
+      </div>
+
+      <div class="view" id="view-tasks" hidden>
+        <section class="panel">
+          <div class="section-head">
+            <b>Task Analytics</b>
+            <span id="taskTotal">0 tasks processed</span>
+          </div>
+          <div class="card-grid" id="taskGrid" style="padding:12px"></div>
+        </section>
+      </div>
+
+      <div class="view" id="view-decisions" hidden>
+        <section class="panel">
+          <div class="table-tools">
+            <div class="section-head" style="border:0;padding:0;min-height:auto">
+              <b>Decision Feed</b>
+              <span id="decisionTotal">most recent first</span>
+            </div>
+            <input class="filter" id="filter" placeholder="Filter tasks, types, tiers">
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th>Type</th>
+                  <th>Model</th>
+                  <th>Cost</th>
+                  <th>Latency</th>
+                  <th>Verify</th>
+                </tr>
+              </thead>
+              <tbody id="feed">
+                <tr><td colspan="6"><div class="empty">Waiting for routing decisions.</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </section>
   </main>
 </div>
@@ -634,6 +695,8 @@ const MODEL_STACK = [
   {tier:'T2', name:'Qwen 2.5', detail:'7B local', logo:'Q7', img:'/imgs/logos/qwen.png', accent:'var(--qwen)'},
   {tier:'T3', name:'Qwen 2.5', detail:'14B local', logo:'Q14', img:'/imgs/logos/qwen.png', accent:'var(--pro)'},
 ];
+let lastData = null;
+let filterText = '';
 
 const el = id => document.getElementById(id);
 const usd = (v, digits = 4) => '$' + Number(v || 0).toFixed(digits);
@@ -658,6 +721,51 @@ function logoHtml(model){
   return model.img ? `<img src="${esc(model.img)}" alt="" loading="lazy">` : esc(model.logo);
 }
 
+function setView(name){
+  document.querySelectorAll('.tab-button').forEach(btn => {
+    btn.classList.toggle('is-active', btn.dataset.view === name);
+  });
+  document.querySelectorAll('.view').forEach(view => {
+    view.hidden = view.id !== `view-${name}`;
+  });
+}
+
+function renderKpis(data){
+  const reqs = Number(data.requests || 0);
+  const cacheHits = Number(data.cache_hits || 0);
+  const escalations = Number(data.escalations || 0);
+  el('req').textContent = reqs;
+  el('cost').textContent = usd(data.cost_usd);
+  el('base').textContent = usd(data.baseline_usd);
+  el('save').textContent = `${Number(data.savings_pct || 0).toFixed(1)}%`;
+  el('avgLatency').textContent = `${Number(data.avg_dispatch_latency_ms || 0).toFixed(0)} ms`;
+  el('p95Latency').textContent = `${Number(data.p95_dispatch_latency_ms || 0).toFixed(0)} ms`;
+  el('cacheRate').textContent = reqs ? `${(100 * cacheHits / reqs).toFixed(1)}%` : '0.0%';
+  el('escRate').textContent = reqs ? `${(100 * escalations / reqs).toFixed(1)}%` : '0.0%';
+}
+
+function renderOverview(data){
+  const reqs = Number(data.requests || 0);
+  const cacheHits = Number(data.cache_hits || 0);
+  const escalations = Number(data.escalations || 0);
+  const spent = Number(data.budget_spent_today || 0);
+  const pct = Math.min(100, 100 * spent / DAILY_CAP);
+  el('burnAmount').textContent = usd(spent);
+  el('burnCap').textContent = `${usd(DAILY_CAP,2)} cap`;
+  el('burnfill').style.width = `${pct.toFixed(1)}%`;
+  el('burnPct').textContent = `${pct.toFixed(1)}%`;
+  el('burn').classList.toggle('hot', pct > 85);
+  el('cacheEsc').textContent = `${cacheHits} cache / ${escalations} escalations`;
+  el('quarantineCount').textContent = Number(data.quarantined || 0);
+  const passes = Number((data.verifier_stats || {}).pass || 0);
+  const fails = Number((data.verifier_stats || {}).fail || 0);
+  const total = passes + fails;
+  el('verifierPassRate').textContent = total ? `${Math.round(100 * passes / total)}%` : '0%';
+  el('verifierStats').textContent = `${passes} pass / ${fails} fail`;
+  el('cacheRate').textContent = reqs ? `${(100 * cacheHits / reqs).toFixed(1)}%` : '0.0%';
+  el('escRate').textContent = reqs ? `${(100 * escalations / reqs).toFixed(1)}%` : '0.0%';
+}
+
 function renderModels(util, requests){
   const total = Math.max(1, Number(requests || 0));
   const maxCount = Math.max(1, ...MODEL_STACK.map(m => Number((util || {})[m.tier] || 0)));
@@ -673,60 +781,52 @@ function renderModels(util, requests){
         <span>${esc(m.tier)} · ${esc(m.detail)}</span>
       </div>
       <div class="model-count">
-        <div class="model-count-row">
-          <span>${count}</span>
-          <span>${pct.toFixed(1)}%</span>
-        </div>
+        <div class="model-count-row"><span>${count}</span><span>${pct.toFixed(1)}%</span></div>
         <div class="bar"><div class="bar-fill" style="width:${width.toFixed(1)}%"></div></div>
-      </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function renderTasks(types, requests){
-  const total = Math.max(1, Number(requests || 0));
-  const maxCount = Math.max(1, ...Object.values(types || {}));
-  
-  el('taskTotal').textContent = `${total} tasks processed`;
-  
-  if(!types || Object.keys(types).length === 0){
-    el('taskGrid').innerHTML = '<div class="empty" style="padding:0">No task data yet.</div>';
-    return;
-  }
-  
-  el('taskGrid').innerHTML = Object.entries(types).map(([type, count]) => {
-    const pct = 100 * count / total;
-    const width = 100 * count / maxCount;
-    return `<div class="model-row is-active" style="--accent:var(--qwen); grid-template-columns: minmax(0,1fr);">
-      <div class="model-copy">
-        <b>${esc(type).replace(/_/g, ' ')}</b>
-        <span>${count} tasks (${pct.toFixed(1)}%)</span>
-      </div>
-      <div class="model-count">
-        <div class="bar"><div class="bar-fill" style="width:${width}%"></div></div>
       </div>
     </div>`;
   }).join('');
 }
 
-function renderFeed(rows){
-  if(!rows || rows.length === 0){
-    el('feed').innerHTML = '<tr><td colspan="6"><div class="empty">Waiting for routing decisions.</div></td></tr>';
+function renderTasks(types, requests){
+  const entries = Object.entries(types || {});
+  const total = Math.max(1, Number(requests || 0));
+  const maxCount = Math.max(1, ...entries.map(([,count]) => Number(count || 0)));
+  el('taskTotal').textContent = `${Number(requests || 0)} tasks processed`;
+  if(!entries.length){
+    el('taskGrid').innerHTML = '<div class="empty">No task data yet.</div>';
     return;
   }
-  el('feed').innerHTML = rows.map(r => {
+  el('taskGrid').innerHTML = entries.map(([type, count]) => {
+    const n = Number(count || 0);
+    const pct = 100 * n / total;
+    const width = 100 * n / maxCount;
+    return `<div class="task-card">
+      <b>${esc(type).replace(/_/g, ' ')}</b>
+      <span>${n} tasks · ${pct.toFixed(1)}%</span>
+      <div class="bar"><div class="bar-fill" style="width:${width.toFixed(1)}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderFeed(rows){
+  const items = (rows || []).filter(r => JSON.stringify(r).toLowerCase().includes(filterText));
+  el('decisionTotal').textContent = `${items.length} visible`;
+  if(!items.length){
+    el('feed').innerHTML = '<tr><td colspan="6"><div class="empty">No matching decisions.</div></td></tr>';
+    return;
+  }
+  el('feed').innerHTML = items.map(r => {
     const model = modelForTier(r.chosen_tier);
     const verdictClass = r.verdict === 'fail' ? 'fail' : r.verdict === 'pass' ? 'pass' : '';
     const verify = r.verdict || (r.escalated_to ? 'escalated' : 'not sampled');
     const verifyClass = r.escalated_to && !r.verdict ? 'warn' : verdictClass;
-    const type = r.task_type || '';
     return `<tr>
       <td class="task-cell">
         <div class="task-title">${esc(r.task_preview || '')}</div>
         <div class="task-meta">${esc(fmtTime(r.ts))}</div>
       </td>
-      <td><span class="pill">${esc(type)}</span></td>
+      <td><span class="pill">${esc(r.task_type || '')}</span></td>
       <td>
         <div class="tier-cell" style="--accent:${model.accent}">
           <div class="tiny-logo">${logoHtml(model)}</div>
@@ -743,60 +843,39 @@ function renderFeed(rows){
   }).join('');
 }
 
+function renderAll(data){
+  lastData = data;
+  renderKpis(data);
+  renderOverview(data);
+  renderModels(data.tier_utilization || {}, data.requests || 0);
+  renderTasks(data.task_types || {}, data.requests || 0);
+  renderFeed(data.recent || []);
+}
+
 async function tick(){
   try{
-    const res = await fetch('/api/stats');
+    const hours = Number(el('windowHours').value || 24);
+    const res = await fetch(`/api/stats?window_hours=${encodeURIComponent(hours)}`);
     if(!res.ok) throw new Error('stats unavailable');
     const data = await res.json();
-    
     el('stamp').textContent = new Date().toLocaleTimeString();
-    
-    const reqs = Number(data.requests || 0);
-    el('req').textContent = reqs;
-    el('cost').textContent = usd(data.cost_usd);
-    el('base').textContent = usd(data.baseline_usd);
-    el('save').textContent = (data.savings_pct || 0).toFixed(1) + '%';
-    
-    const cacheHits = Number(data.cache_hits || 0);
-    const escalations = Number(data.escalations || 0);
-    
-    el('cacheRate').textContent = reqs > 0 ? (100 * cacheHits / reqs).toFixed(1) + '%' : '0.0%';
-    el('escRate').textContent = reqs > 0 ? (100 * escalations / reqs).toFixed(1) + '%' : '0.0%';
-    el('avgLatency').textContent = `${Number(data.avg_dispatch_latency_ms || 0).toFixed(0)} ms`;
-    el('p95Latency').textContent = `${Number(data.p95_dispatch_latency_ms || 0).toFixed(0)} ms`;
-    
-    // Budget Burn
-    const spent = Number(data.budget_spent_today || 0);
-    const pct = Math.min(100, 100 * spent / DAILY_CAP);
-    el('burnAmount').textContent = usd(spent);
-    el('burnCap').textContent = `${usd(DAILY_CAP,2)} cap`;
-    el('burnfill').style.width = pct + '%';
-    el('burnPct').textContent = pct.toFixed(1) + '%';
-    el('burn').className = `burn ${pct > 85 ? 'hot' : ''}`;
-    el('cacheEsc').textContent = `${cacheHits} cache / ${escalations} escalations`;
-
-    // Security & Quarantine
-    el('quarantineCount').textContent = Number(data.quarantined || 0);
-    
-    // Verifier Insights
-    const passes = Number((data.verifier_stats || {})['pass'] || 0);
-    const fails = Number((data.verifier_stats || {})['fail'] || 0);
-    const totalVerifications = passes + fails;
-    const passRate = totalVerifications > 0 ? Math.round(100 * passes / totalVerifications) : 0;
-    el('verifierPassRate').textContent = totalVerifications > 0 ? `${passRate}%` : '0%';
-    el('verifierStats').textContent = `${passes} pass / ${fails} fail`;
-
-    renderModels(data.tier_utilization, reqs);
-    renderTasks(data.task_types, reqs);
-    renderFeed(data.recent || []);
+    renderAll(data);
   }catch(e){
     el('stamp').textContent = 'Offline';
   }
 }
 
+document.querySelectorAll('.tab-button').forEach(btn => {
+  btn.addEventListener('click', () => setView(btn.dataset.view));
+});
 el('refresh').addEventListener('click', tick);
+el('windowHours').addEventListener('change', tick);
+el('filter').addEventListener('input', e => {
+  filterText = e.target.value.trim().toLowerCase();
+  renderFeed((lastData && lastData.recent) || []);
+});
 tick();
-setInterval(tick, 2000);
+setInterval(tick, 3000);
 </script>
 </body>
 </html>

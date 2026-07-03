@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import os
 import re
+import time
+from functools import wraps
 
 import httpx
 
@@ -40,6 +42,37 @@ def _approx_msg_tokens(messages: list[dict]) -> int:
     return _approx_tokens(" ".join(m.get("content", "") for m in messages))
 
 
+def _with_retries(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        max_retries = 3
+        backoff = 1.0
+        last_err = None
+        for attempt in range(max_retries):
+            try:
+                return func(*args, **kwargs)
+            except (httpx.TimeoutException, httpx.ConnectError) as e:
+                last_err = e
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code in (429, 500, 502, 503, 504):
+                    last_err = e
+                else:
+                    raise
+            except Exception as e:
+                name = type(e).__name__
+                if any(k in name for k in ("RateLimit", "Timeout", "InternalServer", "APIConnection")):
+                    last_err = e
+                else:
+                    raise
+            
+            print(f"Retrying after error: {last_err}")
+            time.sleep(backoff)
+            backoff *= 2
+        raise last_err
+    return wrapper
+
+
+@_with_retries
 def _ollama_generate(model_id: str, messages: list[dict]) -> tuple[str, int, int]:
     """Call a local Ollama model with a full message list (multi-turn ready)."""
     r = httpx.post(
@@ -63,6 +96,7 @@ def _to_gemini_contents(messages: list[dict]) -> list[dict]:
              "parts": [{"text": m.get("content", "")}]} for m in messages]
 
 
+@_with_retries
 def _gemini_generate(model_id: str, api_key: str, messages: list[dict]) -> tuple[str, int, int]:
     """Call the Gemini API (Phase 2). Imported lazily so Phase 1 needs no key."""
     from google import genai
@@ -76,6 +110,7 @@ def _gemini_generate(model_id: str, api_key: str, messages: list[dict]) -> tuple
     return text, int(itok), int(otok)
 
 
+@_with_retries
 def _openai_generate(model_id: str, api_key: str, messages: list[dict]) -> tuple[str, int, int]:
     """Call the OpenAI API (Phase 3). Imported lazily; needs the openai package."""
     from openai import OpenAI

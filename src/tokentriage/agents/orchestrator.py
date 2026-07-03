@@ -47,6 +47,7 @@ class RouteResult:
     escalated_to: str | None = None
     context_note: str | None = None  # how conversation context was shared (cloud)
     dispatch_latency_ms: float = 0.0  # total provider dispatch latency, incl. escalation
+    error: str | None = None
     trace: list[tuple[str, float]] = field(default_factory=list)  # (state, ts)
 
 
@@ -96,18 +97,40 @@ def _candidate_tiers(policy: dict, verdict: TriageVerdict) -> list[str]:
         paid = [t for t in paid if TIER_ORDER.index(t) >= TIER_ORDER.index(lo)]
     if hi:
         paid = [t for t in paid if TIER_ORDER.index(t) <= TIER_ORDER.index(hi)]
-    return paid
+    valid_paid = []
+    for t in paid:
+        tier_obj = TIERS[t]
+        if tier_obj.provider in ("gemini", "openai") and not tier_obj.api_key:
+            continue
+        valid_paid.append(t)
+    return valid_paid
 
 
 def _pick_tier(policy: dict, verdict: TriageVerdict) -> tuple[str, str]:
     """Core decision: cheapest candidate clearing the accuracy floor."""
-    floor = float(policy["default"]["accuracy_floor"])
+    floor = float(policy.get("default", {}).get("accuracy_floor", 0.90))
+    slo = float(policy.get("default", {}).get("latency_slo_ms", 4000))
     candidates = _candidate_tiers(policy, verdict)
     candidates = breaker.allowed_tiers(policy, candidates)  # budget circuit breaker
+    
+    fallback = None
     for tier in candidates:  # ordered cheapest-first
         acc = mcp_tools.get_accuracy_benchmark(tier, verdict.task_type)
         if acc >= floor:
-            return tier, f"cheapest tier with {acc:.2f} >= floor {floor:.2f} for {verdict.task_type}"
+            lat = mcp_tools.get_latency_benchmark(tier).get("p95_dispatch_latency_ms", 0.0)
+            if lat > 0 and lat > slo:
+                if fallback is None:
+                    fallback = (tier, f"met accuracy but skipped due to latency (p95 {lat:.0f}ms > {slo}ms); used as fallback")
+                continue
+            return tier, f"cheapest tier with {acc:.2f} >= floor {floor:.2f} (p95 {lat:.0f}ms <= SLO) for {verdict.task_type}"
+    
+    if fallback:
+        return fallback
+
+    if not candidates:
+        # Extreme edge case: all tiers disabled (missing keys, out of budget, etc.)
+        raise RuntimeError("No candidate tiers available. Check API keys and budget.")
+
     # Nothing clears the floor within constraints: take the most capable allowed.
     return candidates[-1], "no tier met floor; selected most capable allowed tier"
 
@@ -164,12 +187,17 @@ def _dispatch(tier: str, task: str, messages: list[dict] | None = None) -> tuple
 
 
 def _timed_dispatch(tier: str, task: str,
-                    messages: list[dict] | None = None) -> tuple[str, int, int, float]:
-    """Dispatch and return latency in milliseconds for routing telemetry."""
+                    messages: list[dict] | None = None) -> tuple[str, int, int, float, str | None]:
+    """Dispatch and return latency in milliseconds and error string for routing telemetry."""
     start = time.perf_counter()
-    answer, itok, otok = _dispatch(tier, task, messages)
+    error_msg = None
+    answer, itok, otok = "", 0, 0
+    try:
+        answer, itok, otok = _dispatch(tier, task, messages)
+    except Exception as e:
+        error_msg = f"{type(e).__name__}: {str(e)}"
     latency_ms = (time.perf_counter() - start) * 1000
-    return answer, itok, otok, latency_ms
+    return answer, itok, otok, latency_ms, error_msg
 
 
 def route(task: str, policy: dict, cache: SemanticCache,
@@ -218,12 +246,14 @@ def route(task: str, policy: dict, cache: SemanticCache,
     send_msgs, cnote = _privacy_context(TIERS[tier], task, messages, policy)
     emit("DISPATCHING", tier=tier, model=TIERS[tier].model_id,
          detail=f"generating on {TIERS[tier].model_id}")
-    answer, itok, otok, latency_ms = _timed_dispatch(tier, task, send_msgs)
+    answer, itok, otok, latency_ms, err = _timed_dispatch(tier, task, send_msgs)
     cost = estimate_cost_usd(tier, itok, otok)
     breaker.record(tier, cost)
     baseline = estimate_baseline_usd(itok, otok)  # what all-cloud-frontier would cost
     if cnote:
         emit("CONTEXT", detail=cnote)
+    if err:
+        emit("ERROR", detail=f"{TIERS[tier].model_id} failed: {err}")
     emit("DISPATCHED", cost=cost, tokens=itok + otok,
          latency_ms=round(latency_ms, 1),
          detail=f"answered by {TIERS[tier].model_id}")
@@ -232,7 +262,7 @@ def route(task: str, policy: dict, cache: SemanticCache,
                          verdict.complexity_score,
                          f"{verdict.rationale} | {why}", cost, baseline,
                          context_note=cnote, dispatch_latency_ms=latency_ms,
-                         trace=trace)
+                         error=err, trace=trace)
 
     # --- Sampled verification + bounded escalation -------------------------
     max_hops = int(policy.get("escalation", {}).get("max_hops", 2))
@@ -253,10 +283,14 @@ def route(task: str, policy: dict, cache: SemanticCache,
         emit("ESCALATING", tier=up, model=TIERS[up].model_id,
              detail=f"answer too thin — retrying on {TIERS[up].model_id}")
         send_msgs, cnote = _privacy_context(TIERS[up], task, messages, policy)
-        answer, itok, otok, latency_ms = _timed_dispatch(up, task, send_msgs)
+        answer, itok, otok, latency_ms, err = _timed_dispatch(up, task, send_msgs)
         ecost = estimate_cost_usd(up, itok, otok)
         breaker.record(up, ecost)
-        result.answer = answer
+        if err:
+            result.error = err
+            emit("ERROR", detail=f"{TIERS[up].model_id} failed on escalation: {err}")
+        else:
+            result.answer = answer
         result.cost_usd += ecost
         result.dispatch_latency_ms += latency_ms
         result.escalated_to = up
@@ -282,5 +316,6 @@ def _log(r: RouteResult, task: str) -> None:
         cache_hit=int(r.cache_hit), verified=int(r.verified),
         verdict=r.verdict, escalated_to=r.escalated_to,
         dispatch_latency_ms=round(r.dispatch_latency_ms, 1),
+        error=r.error,
     )
     mcp_tools.log_routing_decision(r.task_id, r.chosen_tier, r.rationale, r.cost_usd)

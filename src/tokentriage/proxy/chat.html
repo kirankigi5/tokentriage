@@ -149,6 +149,18 @@
     grid-template-columns:1fr;
     gap:8px;
   }
+  .demo-replay-controls{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    margin:12px 0 0;
+  }
+  .demo-replay-controls .link-button{
+    flex:1;
+  }
+  .demo-replay-controls .link-button.primary{
+    flex:2;
+  }
   .history-block{
     min-height:0;
     display:grid;
@@ -1346,6 +1358,12 @@
       <a class="link-button" href="/architecture">Architecture</a>
     </nav>
 
+<div id="demoReplayControls" class="demo-replay-controls" style="display:none;">
+      <button type="button" class="link-button" onclick="demoReplay('prev')" title="Previous Trace">Prev</button>
+      <button type="button" class="link-button primary" onclick="demoReplay('reset')" title="Reset Judge Trace">Reset Demo</button>
+      <button type="button" class="link-button" onclick="demoReplay('next')" title="Next Trace">Next</button>
+    </div>
+
     <div class="history-block">
       <div class="history-title">
         <span>Chats</span>
@@ -1459,6 +1477,21 @@ const runtimeStatus = document.getElementById('runtimeStatus');
 const runtimeFlow = document.getElementById('runtimeFlow');
 const runtimeNote = document.getElementById('runtimeNote');
 const KEY = 'tokentriage.history';
+const JUDGE_MODE_CONFIG = '/api/config';
+
+async function initJudgeMode() {
+  try {
+    const res = await fetch(JUDGE_MODE_CONFIG);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.judge_mode) {
+      const ctrl = document.getElementById('demoReplayControls');
+      if (ctrl) ctrl.style.display = 'flex';
+    }
+  } catch {}
+}
+
+initJudgeMode();
 
 const MODEL_STACK = [
   {tier:'T0', name:'Nomic Embed', detail:'semantic cache', logo:'NE', img:'/imgs/logos/nomic.png', accent:'var(--cache)', token:'cache'},
@@ -2253,6 +2286,44 @@ document.getElementById('clear').addEventListener('click', (e)=>{
   refreshHistory();
   input.focus();
 });
+
+async function demoReplay(action) {
+  try {
+    const res = await fetch(`/demo/replay/${action}`, { method: action === 'reset' ? 'POST' : 'GET' });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (action === 'reset') {
+      history = [];
+      convId = newConvId();
+      localStorage.setItem(CONV_KEY, convId);
+      renderAll();
+      resetRail();
+      clearInspector();
+      resetRuntime();
+      refreshHistory();
+      return;
+    }
+    if (data.conversation && data.conversation.length > 0) {
+      convId = data.conversation[0].conversation_id || newConvId();
+      localStorage.setItem(CONV_KEY, convId);
+      history = [];
+      for (const msg of data.conversation) {
+        history.push({
+          role: msg.role,
+          content: msg.content,
+          tokentriage: msg.tokentriage || null
+        });
+      }
+      renderAll();
+      clearInspector();
+      if (data.decision) {
+        runtimeFromEvents([], data.decision);
+      }
+    }
+  } catch(e) {
+    console.error('Demo replay error:', e);
+  }
+}
 
 // --- Saved-conversation history (server-side) -----------------------------
 async function refreshHistory(){

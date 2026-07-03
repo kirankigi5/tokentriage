@@ -24,7 +24,7 @@ policies:
     verify_sample_rate: 0.25  # fraction of cheap-tier answers sent to verifier
 
   cache:
-    enabled: true
+    enabled: false
     similarity_threshold: 0.95   # cosine sim on embeddings to count as a hit
     ttl_hours: 168               # 1 week
 

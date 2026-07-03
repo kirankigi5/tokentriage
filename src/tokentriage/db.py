@@ -36,7 +36,8 @@ CREATE TABLE IF NOT EXISTS decisions (
     verified INTEGER DEFAULT 0, -- 0 = not sampled, 1 = sampled
     verdict TEXT,               -- pass / fail / NULL
     escalated_to TEXT,          -- tier it escalated to, if any
-    dispatch_latency_ms REAL DEFAULT 0
+    dispatch_latency_ms REAL DEFAULT 0,
+    error TEXT                  -- transient or permanent error message, if any
 );
 CREATE TABLE IF NOT EXISTS feedback (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,7 +57,8 @@ CREATE TABLE IF NOT EXISTS budget (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts REAL NOT NULL,
     tier TEXT NOT NULL,
-    cost_usd REAL NOT NULL
+    cost_usd REAL NOT NULL,
+    latency_ms REAL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS cache (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -129,6 +131,14 @@ def init_db() -> None:
             c.execute("ALTER TABLE decisions ADD COLUMN dispatch_latency_ms REAL DEFAULT 0")
         except sqlite3.OperationalError:
             pass  # Column already exists
+        try:
+            c.execute("ALTER TABLE decisions ADD COLUMN error TEXT")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        try:
+            c.execute("ALTER TABLE budget ADD COLUMN latency_ms REAL DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
         for tier, tt, acc in _SEED_BENCHMARKS:
             c.execute(
                 "INSERT OR IGNORE INTO benchmarks (model_tier, task_type, accuracy, samples)"
@@ -142,12 +152,12 @@ def log_decision(**kw) -> None:
         c.execute(
             """INSERT INTO decisions (ts, task_id, task_preview, task_type, complexity,
                chosen_tier, rationale, cost_usd, baseline_cost_usd, cache_hit,
-               verified, verdict, escalated_to, dispatch_latency_ms)
+               verified, verdict, escalated_to, dispatch_latency_ms, error)
                VALUES (:ts,:task_id,:task_preview,:task_type,:complexity,:chosen_tier,
                :rationale,:cost_usd,:baseline_cost_usd,:cache_hit,:verified,:verdict,
-               :escalated_to,:dispatch_latency_ms)""",
+               :escalated_to,:dispatch_latency_ms,:error)""",
             {"ts": time.time(), "verdict": None, "escalated_to": None,
-             "verified": 0, "cache_hit": 0, "dispatch_latency_ms": 0.0, **kw},
+             "verified": 0, "cache_hit": 0, "dispatch_latency_ms": 0.0, "error": None, **kw},
         )
 
 
@@ -157,10 +167,10 @@ def record_feedback(task_type: str, tier: str, verdict: str) -> None:
                   (time.time(), task_type, tier, verdict))
 
 
-def record_spend(tier: str, cost_usd: float) -> None:
+def record_spend(tier: str, cost_usd: float, latency_ms: float = 0.0) -> None:
     with conn() as c:
-        c.execute("INSERT INTO budget (ts, tier, cost_usd) VALUES (?,?,?)",
-                  (time.time(), tier, cost_usd))
+        c.execute("INSERT INTO budget (ts, tier, cost_usd, latency_ms) VALUES (?,?,?,?)",
+                  (time.time(), tier, cost_usd, latency_ms))
 
 
 def spend_today_usd() -> float:
