@@ -96,14 +96,9 @@
   .brand-mark{
     width:36px;
     height:36px;
-    display:grid;
-    place-items:center;
-    border:1px solid var(--ink);
-    background:linear-gradient(135deg,var(--ink),color-mix(in srgb,var(--ink) 72%,var(--cache)));
-    color:var(--paper);
     border-radius:8px;
     box-shadow:4px 4px 0 color-mix(in srgb, var(--cache) 28%, transparent);
-    font:800 11px/1 var(--mono);
+    object-fit:cover;
   }
   h1{
     margin:0;
@@ -1214,7 +1209,7 @@
 <div class="shell">
   <aside class="sidebar" aria-label="Conversation history">
     <div class="brand">
-      <div class="brand-mark">TT</div>
+      <img class="brand-mark" src="/imgs/logos/app_logo.png" alt="TokenTriage">
       <div>
         <h1>TokenTriage</h1>
         <p>local-first inference router</p>

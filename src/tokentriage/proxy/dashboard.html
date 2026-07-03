@@ -57,15 +57,25 @@
     min-height:calc(100vh - 44px);
     margin:0 auto;
     display:grid;
-    grid-template-rows:auto 1fr;
+    grid-template-columns:236px minmax(0,1fr);
     gap:16px;
+  }
+  .sidebar{
+    min-height:0;
+    display:grid;
+    grid-template-rows:auto auto auto 1fr auto;
+    gap:12px;
+    padding:14px;
+    border:1px solid var(--rule);
+    border-radius:12px;
+    background:color-mix(in srgb, var(--panel) 94%, transparent);
   }
   .topbar{
     min-height:58px;
     display:flex;
     align-items:center;
-    justify-content:space-between;
-    gap:14px;
+    justify-content:flex-start;
+    gap:24px;
   }
   .brand{
     min-width:0;
@@ -74,33 +84,25 @@
     gap:12px;
   }
   .brand-mark{
-    width:42px;
-    height:42px;
-    display:grid;
-    place-items:center;
-    border:1px solid var(--ink);
+    width:36px;
+    height:36px;
     border-radius:8px;
-    background:linear-gradient(135deg,var(--ink),color-mix(in srgb,var(--ink) 72%,var(--cache)));
-    color:var(--paper);
-    box-shadow:5px 5px 0 color-mix(in srgb, var(--cache) 36%, transparent);
-    font:800 13px/1 var(--mono);
+    box-shadow:4px 4px 0 color-mix(in srgb, var(--cache) 28%, transparent);
+    object-fit:cover;
   }
   h1{
     margin:0;
-    font-size:clamp(18px,2vw,24px);
+    font-size:17px;
     line-height:1.05;
   }
   .brand p{
     margin:3px 0 0;
     color:var(--muted);
-    font:12px/1.2 var(--mono);
+    font:11px/1.2 var(--mono);
   }
-  .top-actions{
-    display:flex;
-    align-items:center;
-    justify-content:flex-end;
-    gap:8px;
-    flex-wrap:wrap;
+  .sidebar-nav{
+    display:grid;
+    gap:4px;
   }
   .link-button{
     height:36px;
@@ -115,6 +117,19 @@
     text-decoration:none;
     font:800 12px/1 var(--mono);
     cursor:pointer;
+  }
+  .link-button.primary{
+    width:100%;
+    height:36px;
+    border-color:color-mix(in srgb, var(--ink) 38%, var(--rule));
+    background:color-mix(in srgb, var(--ink) 8%, var(--panel));
+    color:var(--ink);
+  }
+  .link-button:hover{
+    background:var(--panel-2);
+  }
+  .link-button.primary:hover{
+    background:color-mix(in srgb, var(--ink) 12%, var(--panel));
   }
   .link-button.is-active{
     border-color:color-mix(in srgb, var(--cache) 46%, var(--rule));
@@ -144,7 +159,12 @@
   }
   .hero{
     display:grid;
-    grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);
+    gap:1px;
+    background:var(--rule);
+  }
+  .side-panels{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
     gap:1px;
     background:var(--rule);
   }
@@ -155,7 +175,7 @@
   }
   .hero-main{
     display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
+    grid-template-columns:repeat(6,minmax(0,1fr));
     gap:1px;
     background:
       linear-gradient(135deg, color-mix(in srgb, var(--cache) 8%, transparent), transparent 42%),
@@ -434,16 +454,25 @@
   }
   @media (max-width:960px){
     body{padding:12px}
-    .shell{min-height:calc(100vh - 24px)}
-    .hero{grid-template-columns:1fr}
-    .hero-main{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .shell{
+      min-height:calc(100vh - 24px);
+      grid-template-columns:1fr;
+    }
+    .sidebar{
+      grid-template-rows:auto;
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .hero-main{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .side-panels{grid-template-columns:1fr}
     .model-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   }
   @media (max-width:620px){
     .topbar{align-items:flex-start;flex-direction:column}
     .top-actions{width:100%;justify-content:stretch}
     .link-button,.stamp{flex:1;min-width:0}
-    .hero-main{grid-template-columns:1fr}
+    .hero-main{grid-template-columns:repeat(2,minmax(0,1fr))}
     .model-grid{grid-template-columns:1fr}
     .metric{min-height:82px}
     .task-cell{min-width:220px}
@@ -455,21 +484,29 @@
 </head>
 <body>
 <div class="shell">
-  <header class="topbar">
+  <aside class="sidebar">
     <div class="brand">
-      <div class="brand-mark">TT</div>
+      <img class="brand-mark" src="/imgs/logos/app_logo.png" alt="TokenTriage">
       <div>
-        <h1>TokenTriage Dashboard</h1>
-        <p>spend, cache, verification, and model routing</p>
+        <h1>TokenTriage</h1>
+        <p>local-first inference router</p>
       </div>
     </div>
-    <div class="top-actions">
+    
+    <a class="link-button primary" href="/chat">New chat</a>
+
+    <nav class="sidebar-nav" aria-label="Primary navigation">
       <a class="link-button" href="/chat">Chat</a>
       <a class="link-button is-active" href="/dashboard">Dashboard</a>
-      <button class="link-button" type="button" id="refresh">Refresh</button>
-      <span class="stamp" id="stamp">Connecting</span>
+    </nav>
+    
+    <div style="margin-top:auto; display:grid; gap:8px">
+       <button class="link-button" type="button" id="refresh" style="width:100%">Refresh</button>
+       <div style="text-align:center">
+         <span class="stamp" id="stamp" style="border:none;background:transparent;width:100%;height:auto;min-width:0;font-size:11px;color:var(--muted)">Connecting</span>
+       </div>
     </div>
-  </header>
+  </aside>
 
   <main class="dashboard-shell">
     <section class="hero" aria-label="Dashboard summary">
@@ -490,23 +527,65 @@
           <span>Savings</span>
           <b id="save">0.0%</b>
         </div>
+        <div class="metric">
+          <span>Cache Hit Rate</span>
+          <b id="cacheRate">0.0%</b>
+        </div>
+        <div class="metric">
+          <span>Escalation Rate</span>
+          <b id="escRate">0.0%</b>
+        </div>
       </div>
-      <aside class="budget-panel">
-        <div class="budget-top">
-          <div>
-            <span>Daily Budget Burn</span>
-            <b id="burnAmount">$0.0000</b>
+      <div class="side-panels">
+        <aside class="budget-panel">
+          <div class="budget-top">
+            <div>
+              <span>Daily Budget Burn</span>
+              <b id="burnAmount">$0.0000</b>
+            </div>
+            <div class="budget-cap" id="burnCap">$5.0000 cap</div>
           </div>
-          <div class="budget-cap" id="burnCap">$5.0000 cap</div>
-        </div>
-        <div class="burn" id="burn">
-          <div class="burn-track"><div class="burn-fill" id="burnfill"></div></div>
-          <div class="burn-label">
-            <span id="burnPct">0.0%</span>
-            <span id="cacheEsc">0 cache / 0 escalations</span>
+          <div class="burn" id="burn">
+            <div class="burn-track"><div class="burn-fill" id="burnfill"></div></div>
+            <div class="burn-label">
+              <span id="burnPct">0.0%</span>
+              <span id="cacheEsc">0 cache / 0 escalations</span>
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
+        <aside class="budget-panel">
+          <div class="budget-top">
+            <div>
+              <span>Security Guardrail</span>
+              <b id="quarantineCount" style="color:var(--pro)">0</b>
+            </div>
+            <div class="budget-cap" style="color:var(--pro)">quarantined</div>
+          </div>
+          <div class="burn">
+            <div class="burn-label" style="margin-top:14px;color:var(--pro)">Requests blocked for safety</div>
+          </div>
+        </aside>
+        <aside class="budget-panel">
+          <div class="budget-top">
+            <div>
+              <span>Verifier Accuracy</span>
+              <b id="verifierPassRate">0%</b>
+            </div>
+            <div class="budget-cap">pass rate</div>
+          </div>
+          <div class="burn">
+            <div class="burn-label" style="margin-top:14px;" id="verifierStats">0 pass / 0 fail</div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="models" aria-label="Task Analytics">
+      <div class="section-title">
+        <b>Task Analytics</b>
+        <span id="taskTotal">0 tasks processed</span>
+      </div>
+      <div class="model-grid" id="taskGrid"></div>
     </section>
 
     <section class="models" aria-label="Model utilization">
@@ -590,6 +669,33 @@ function renderModels(util, requests){
         </div>
         <div class="bar"><div class="bar-fill" style="width:${width.toFixed(1)}%"></div></div>
       </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderTasks(types, requests){
+  const total = Math.max(1, Number(requests || 0));
+  const maxCount = Math.max(1, ...Object.values(types || {}));
+  
+  el('taskTotal').textContent = `${total} tasks processed`;
+  
+  if(!types || Object.keys(types).length === 0){
+    el('taskGrid').innerHTML = '<div class="empty" style="padding:0">No task data yet.</div>';
+    return;
+  }
+  
+  el('taskGrid').innerHTML = Object.entries(types).map(([type, count]) => {
+    const pct = 100 * count / total;
+    const width = 100 * count / maxCount;
+    return `<div class="model-row is-active" style="--accent:var(--qwen); grid-template-columns: minmax(0,1fr);">
+      <div class="model-copy">
+        <b>${esc(type).replace(/_/g, ' ')}</b>
+        <span>${count} tasks (${pct.toFixed(1)}%)</span>
+      </div>
+      <div class="model-count">
+        <div class="bar"><div class="bar-fill" style="width:${width}%"></div></div>
+      </div>
     </div>`;
   }).join('');
 }
@@ -630,21 +736,46 @@ async function tick(){
   try{
     const res = await fetch('/api/stats');
     if(!res.ok) throw new Error('stats unavailable');
-    const s = await res.json();
+    const data = await res.json();
+    
     el('stamp').textContent = new Date().toLocaleTimeString();
-    el('req').textContent = Number(s.requests || 0);
-    el('cost').textContent = usd(s.cost_usd);
-    el('base').textContent = usd(s.baseline_usd);
-    el('save').textContent = Number(s.savings_pct || 0).toFixed(1) + '%';
-    el('burnAmount').textContent = usd(s.budget_spent_today);
-    el('burnCap').textContent = usd(DAILY_CAP) + ' cap';
-    const burnPct = Math.min(100, 100 * Number(s.budget_spent_today || 0) / DAILY_CAP);
-    el('burnfill').style.width = burnPct.toFixed(2) + '%';
-    el('burnPct').textContent = burnPct.toFixed(2) + '%';
-    el('cacheEsc').textContent = `${Number(s.cache_hits || 0)} cache / ${Number(s.escalations || 0)} escalations`;
-    el('burn').classList.toggle('hot', burnPct >= 90);
-    renderModels(s.tier_utilization || {}, s.requests || 0);
-    renderFeed(s.recent || []);
+    
+    const reqs = Number(data.requests || 0);
+    el('req').textContent = reqs;
+    el('cost').textContent = usd(data.cost_usd);
+    el('base').textContent = usd(data.baseline_usd);
+    el('save').textContent = (data.savings_pct || 0).toFixed(1) + '%';
+    
+    const cacheHits = Number(data.cache_hits || 0);
+    const escalations = Number(data.escalations || 0);
+    
+    el('cacheRate').textContent = reqs > 0 ? (100 * cacheHits / reqs).toFixed(1) + '%' : '0.0%';
+    el('escRate').textContent = reqs > 0 ? (100 * escalations / reqs).toFixed(1) + '%' : '0.0%';
+    
+    // Budget Burn
+    const spent = Number(data.budget_spent_today || 0);
+    const pct = Math.min(100, 100 * spent / DAILY_CAP);
+    el('burnAmount').textContent = usd(spent);
+    el('burnCap').textContent = `${usd(DAILY_CAP,2)} cap`;
+    el('burnfill').style.width = pct + '%';
+    el('burnPct').textContent = pct.toFixed(1) + '%';
+    el('burn').className = `burn ${pct > 85 ? 'hot' : ''}`;
+    el('cacheEsc').textContent = `${cacheHits} cache / ${escalations} escalations`;
+
+    // Security & Quarantine
+    el('quarantineCount').textContent = Number(data.quarantined || 0);
+    
+    // Verifier Insights
+    const passes = Number((data.verifier_stats || {})['pass'] || 0);
+    const fails = Number((data.verifier_stats || {})['fail'] || 0);
+    const totalVerifications = passes + fails;
+    const passRate = totalVerifications > 0 ? Math.round(100 * passes / totalVerifications) : 0;
+    el('verifierPassRate').textContent = totalVerifications > 0 ? `${passRate}%` : '0%';
+    el('verifierStats').textContent = `${passes} pass / ${fails} fail`;
+
+    renderModels(data.tier_utilization, reqs);
+    renderTasks(data.task_types, reqs);
+    renderFeed(data.recent || []);
   }catch(e){
     el('stamp').textContent = 'Offline';
   }

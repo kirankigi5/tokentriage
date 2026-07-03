@@ -271,6 +271,15 @@ def stats(window_hours: float = 24.0) -> dict:
         recent = c.execute(
             """SELECT ts, task_preview, task_type, chosen_tier, cost_usd, verdict, escalated_to
                FROM decisions ORDER BY id DESC LIMIT 15""").fetchall()
+        
+        quarantined = c.execute("SELECT COUNT(*) n FROM quarantine WHERE ts >= ?", (since,)).fetchone()["n"]
+        task_types = c.execute(
+            "SELECT task_type, COUNT(*) n FROM decisions WHERE ts >= ? GROUP BY task_type ORDER BY n DESC",
+            (since,)).fetchall()
+        verdicts = c.execute(
+            "SELECT verdict, COUNT(*) n FROM decisions WHERE ts >= ? AND verdict IS NOT NULL GROUP BY verdict",
+            (since,)).fetchall()
+
     baseline = row["baseline"] or 0.0
     cost = row["cost"] or 0.0
     return {
@@ -283,4 +292,7 @@ def stats(window_hours: float = 24.0) -> dict:
         "tier_utilization": {r["chosen_tier"]: r["n"] for r in tiers},
         "budget_spent_today": round(spend_today_usd(), 6),
         "recent": [dict(r) for r in recent],
+        "quarantined": quarantined,
+        "task_types": {r["task_type"]: r["n"] for r in task_types},
+        "verifier_stats": {r["verdict"]: r["n"] for r in verdicts},
     }
