@@ -49,7 +49,11 @@ def _decision_rows() -> list[dict]:
     """Return decisions ordered by timestamp as a list of dicts."""
     with db.conn() as c:
         rows = c.execute(
-            "SELECT id, ts, task_id, task_preview, task_type, chosen_tier, cost_usd FROM decisions ORDER BY ts"
+            """SELECT id, ts, task_id, task_preview, task_type, complexity,
+                      chosen_tier, rationale, cost_usd, baseline_cost_usd,
+                      cache_hit, verified, verdict, escalated_to,
+                      dispatch_latency_ms, error
+               FROM decisions ORDER BY ts"""
         ).fetchall()
     return [dict(r) for r in rows]
 

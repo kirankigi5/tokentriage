@@ -2394,6 +2394,167 @@ function finishTrace(box){
   box.open = false;
 }
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function providerForTier(tier){
+  const t = String(tier || '').toUpperCase();
+  if(t === 'T0') return 'semantic-cache';
+  if(['T4','T5','T6','T7'].includes(t)) return 'openrouter';
+  return 'ollama';
+}
+
+function metaFromDecision(decision = {}, fallback = {}){
+  const tier = decision.chosen_tier || fallback.chosen_tier || fallback.tier || '';
+  const model = modelForTier(decision.cache_hit ? 'T0' : tier);
+  return {
+    task_id: decision.task_id || fallback.task_id || 'judge-replay',
+    chosen_tier: tier,
+    model_id: fallback.model_id || model.detail || tier,
+    provider: fallback.provider || providerForTier(decision.cache_hit ? 'T0' : tier),
+    task_type: decision.task_type || fallback.task_type || 'replay',
+    complexity: Number(decision.complexity ?? fallback.complexity ?? 0),
+    rationale: decision.rationale || fallback.rationale || 'judge replay route',
+    cost_usd: Number(decision.cost_usd ?? fallback.cost_usd ?? fallback.cost ?? 0),
+    baseline_cost_usd: Number(decision.baseline_cost_usd ?? fallback.baseline_cost_usd ?? 0),
+    cache_hit: Boolean(Number(decision.cache_hit ?? fallback.cache_hit ?? 0)),
+    verified: Boolean(Number(decision.verified ?? fallback.verified ?? 0)),
+    verdict: decision.verdict ?? fallback.verdict ?? null,
+    escalated_to: decision.escalated_to ?? fallback.escalated_to ?? null,
+    context_note: fallback.context_note || null,
+    dispatch_latency_ms: Number(decision.dispatch_latency_ms ?? fallback.dispatch_latency_ms ?? fallback.latency ?? 0),
+  };
+}
+
+function modelIdForTier(tier){
+  const t = String(tier || '').toUpperCase();
+  if(t === 'T1') return 'qwen2.5:3b';
+  if(t === 'T2') return 'qwen2.5:7b';
+  if(t === 'T3') return 'qwen2.5:14b';
+  if(t === 'T4') return 'google/gemma-4-31b-it:free';
+  if(t === 'T5') return 'openai/gpt-oss-20b:free';
+  if(t === 'T6') return 'qwen/qwen3-next-80b-a3b-instruct:free';
+  if(t === 'T7') return 'qwen/qwen3-coder-480b-a35b:free';
+  return 'semantic-cache';
+}
+
+function buildReplayEvents(task, meta){
+  if(!meta.chosen_tier && meta.task_type === 'security'){
+    return [
+      {stage:'ROUTING', detail:task},
+      {stage:'QUARANTINE', detail:meta.rationale || 'request quarantined'},
+    ];
+  }
+  const events = [
+    {stage:'ROUTING', detail:task},
+    {stage:'SANITIZED', detail:'input checked & sanitized'},
+  ];
+  if(meta.cache_hit){
+    events.push({stage:'CACHE_HIT', detail:'semantic match found - $0, no model call'});
+    events.push({stage:'DONE', detail:'receipt recorded'});
+    return events;
+  }
+  const tier = meta.chosen_tier || 'T1';
+  const model = modelIdForTier(tier);
+  events.push(
+    {stage:'CACHE_MISS', detail:'no semantic match - routing'},
+    {stage:'TRIAGED', detail:`${String(meta.task_type || 'task').replace(/_/g, ' ')} route selected`},
+    {stage:'ROUTED', detail:meta.rationale || `${tier} clears policy floor`},
+  );
+  const startsCloud = tierIsCloud(tier);
+  if(startsCloud){
+    events.push(
+      {stage:'DISPATCHING', tier, model, detail:`generating on ${model}`},
+      {stage:`ESCALATED_${tier}`, tier, model, detail:'OpenRouter rescue answered'},
+    );
+  }else{
+    events.push(
+      {stage:'DISPATCHING', tier, model, detail:`generating on ${model}`},
+      {stage:'DISPATCHED', tier, model, detail:`answered by ${model}`, latency_ms:meta.dispatch_latency_ms},
+    );
+  }
+  if(meta.verified){
+    events.push({stage:'VERIFYING', detail:'sampling answer for quality'});
+    events.push({
+      stage: meta.verdict === 'fail' ? 'VERIFIED_FAIL' : 'VERIFIED_PASS',
+      detail: meta.verdict === 'fail' ? 'answer failed quality gate' : 'answer meets quality bar',
+    });
+  }
+  if(meta.escalated_to && meta.escalated_to !== tier){
+    const rescueModel = modelIdForTier(meta.escalated_to);
+    events.push(
+      {stage:'ESCALATING', tier:meta.escalated_to, model:rescueModel, detail:'retrying via OpenRouter rescue'},
+      {stage:`ESCALATED_${meta.escalated_to}`, tier:meta.escalated_to, model:rescueModel, detail:'OpenRouter rescue answered'},
+    );
+  }
+  events.push({stage:'DONE', detail:'receipt recorded'});
+  return events;
+}
+
+function replayPayloadFromData(data){
+  const conversation = data.conversation || [];
+  const decision = data.decision || {};
+  const preview = decision.task_preview || '';
+  let userMsg = conversation.find(m => m.role === 'user' && (!preview || String(m.content || '').startsWith(preview.slice(0, 60))));
+  if(!userMsg) userMsg = conversation.find(m => m.role === 'user') || {role:'user', content:preview};
+  const userIndex = conversation.indexOf(userMsg);
+  let assistantMsg = conversation.slice(Math.max(0, userIndex + 1)).find(m => m.role === 'assistant');
+  if(!assistantMsg) assistantMsg = conversation.find(m => m.role === 'assistant') || {role:'assistant', content:'Replay answer unavailable.'};
+  const fallbackMeta = assistantMsg.meta || assistantMsg.tokentriage || {};
+  const meta = metaFromDecision(decision, fallbackMeta);
+  const events = (assistantMsg.events && assistantMsg.events.length)
+    ? assistantMsg.events
+    : buildReplayEvents(userMsg.content || preview, meta);
+  return {
+    user: {role:'user', content:userMsg.content || preview},
+    assistant: {role:'assistant', content:assistantMsg.content || '', meta, ms:Number(assistantMsg.ms || meta.dispatch_latency_ms || 0) + 45, events},
+  };
+}
+
+async function playReplay(data){
+  const replay = replayPayloadFromData(data);
+  history = [replay.user];
+  convId = newConvId();
+  localStorage.setItem(CONV_KEY, convId);
+  localStorage.setItem(KEY, JSON.stringify(history));
+  renderAll();
+  clearInspector();
+  beginRouting();
+
+  const twrap = div('turn');
+  const thinking = div('thinking', '<span class="spinner"></span><span>Replaying route</span>');
+  const played = [];
+  const trace = traceBlock(played, {live:true});
+  twrap.appendChild(thinking);
+  twrap.appendChild(trace);
+  feed.appendChild(twrap);
+  feed.scrollTop = feed.scrollHeight;
+
+  for(const ev of replay.assistant.events || []){
+    played.push(ev);
+    appendTraceEvent(trace, ev);
+    updateRuntimeEvent(ev, played);
+    updateRailEvent(ev);
+    feed.scrollTop = feed.scrollHeight;
+    await sleep(ev.stage === 'DISPATCHING' || ev.stage === 'ESCALATING' ? 520 : 280);
+  }
+
+  thinking.remove();
+  finishRouting(replay.assistant.meta, replay.assistant.ms);
+  runtimeFromEvents(played, replay.assistant.meta);
+  const bubble = div('bubble answer', renderMarkdown(replay.assistant.content));
+  applyMath(bubble);
+  twrap.insertBefore(bubble, trace);
+  twrap.classList.add('selectable');
+  twrap.addEventListener('click', () => {
+    showInspector(replay.assistant.meta, replay.assistant.ms);
+    runtimeFromEvents(played, replay.assistant.meta);
+  });
+  finishTrace(trace);
+  history.push({...replay.assistant, events:played});
+  localStorage.setItem(KEY, JSON.stringify(history));
+  feed.scrollTop = feed.scrollHeight;
+}
+
 async function readSSE(res, onItem){
   if(!res.body) throw new Error('streaming response unavailable');
   const reader = res.body.getReader();
@@ -2538,21 +2699,7 @@ async function demoReplay(action) {
       return;
     }
     if (data.conversation && data.conversation.length > 0) {
-      convId = data.conversation[0].conversation_id || newConvId();
-      localStorage.setItem(CONV_KEY, convId);
-      history = [];
-      for (const msg of data.conversation) {
-        history.push({
-          role: msg.role,
-          content: msg.content,
-          tokentriage: msg.tokentriage || null
-        });
-      }
-      renderAll();
-      clearInspector();
-      if (data.decision) {
-        runtimeFromEvents([], data.decision);
-      }
+      await playReplay(data);
     }
   } catch(e) {
     console.error('Demo replay error:', e);

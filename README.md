@@ -41,6 +41,13 @@ tokentriage serve
 Then open `/chat`, select **Judge replay** from the left history panel, and use
 `/dashboard` as the proof ledger.
 
+For the built-in replay controls in the chat UI, start the server directly in
+judge mode:
+
+```bash
+tokentriage serve --judge-mode
+```
+
 ## Why This Exists
 
 Most AI-agent workflows send every request to an expensive frontier model. That
@@ -266,6 +273,12 @@ Seed deterministic no-key replay data:
 tokentriage judge-mode
 ```
 
+Enable the replay API controls while serving:
+
+```bash
+tokentriage serve --judge-mode
+```
+
 ## Results
 
 Bundled 30-query business workload, local-first routing on an Apple M4,
@@ -327,6 +340,7 @@ Use policy for:
 tokentriage serve          # start gateway + UI
 tokentriage demo           # seed curated dashboard traffic
 tokentriage judge-mode     # seed no-key judge replay
+tokentriage serve --judge-mode # serve with replay controls enabled
 tokentriage benchmark      # run benchmark suite
 tokentriage report         # print dashboard stats JSON
 tokentriage evidence       # write reports/latest evidence bundle
