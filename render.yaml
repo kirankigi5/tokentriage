@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: tokentriage-judge-demo
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: TOKENTRIAGE_DISABLE_CLOUD
+        value: "1"
+      - key: TOKENTRIAGE_ENABLE_CLOUD
+        value: "0"
+      - key: TOKENTRIAGE_DB_PATH
+        value: /tmp/tokentriage.db

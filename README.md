@@ -362,33 +362,42 @@ tokentriage adk-demo "..." # run ADK triage/verifier agents locally
 
 ## Hosting
 
-TokenTriage can be deployed in three modes:
+The safest public deployment is the judge replay container. It serves the
+polished chat replay, dashboard, and architecture without live model inference,
+Ollama, OpenRouter, or API keys.
 
-1. **Replay deployment:** serves seeded judge data, dashboard proof,
-   architecture, model-picking transitions, and evidence pages without live
-   model inference.
-2. **Local Ollama tunnel:** runs local models on the host machine and exposes
-   only the TokenTriage UI/API through a tunnel.
-3. **Full VM stack:** runs TokenTriage and Ollama together on one server.
+### Judge Replay Deployment
 
-### Replay Deployment
-
-Seed deterministic replay data and start the server with replay controls:
+The included `Dockerfile` starts replay mode automatically:
 
 ```bash
-tokentriage judge-mode
-tokentriage serve --judge-mode
+docker build -t tokentriage-judge .
+docker run -p 8000:8000 tokentriage-judge
 ```
 
-This mode shows:
+Then open:
+
+```bash
+open http://localhost:8000/chat
+open http://localhost:8000/dashboard
+open http://localhost:8000/architecture
+```
+
+For Render-style blueprint deployment, use `render.yaml`. Required environment
+is already set there:
+
+```env
+TOKENTRIAGE_DISABLE_CLOUD=1
+TOKENTRIAGE_ENABLE_CLOUD=0
+TOKENTRIAGE_DB_PATH=/tmp/tokentriage.db
+```
+
+The hosted replay shows:
 
 - chat replay with routing trace and model-selection transition
 - dashboard analytics from the seeded decision ledger
 - architecture scenarios
-- evidence pages without requiring live model inference
-
-For persistent replay history, store `tokentriage.db` on a persistent volume or
-seed replay data during container startup.
+- prerecorded answers without requiring live model inference
 
 ### Local Ollama Tunnel
 
@@ -418,25 +427,6 @@ docker compose exec ollama ollama pull nomic-embed-text
 ```
 
 Expose port `8000` through the server firewall or reverse proxy.
-
-### Lightweight Hosted UI/API
-
-Cloud Run, Render, Railway, or Fly can run the FastAPI container for `/chat`,
-`/dashboard`, `/architecture`, OpenRouter-enabled mode, and replay deployment.
-Local Ollama requires a reachable `OLLAMA_HOST`.
-
-Build:
-
-```bash
-docker build -t tokentriage .
-docker run --env-file .env -p 8000:8000 tokentriage
-```
-
-For replay deployment, run the app with:
-
-```bash
-tokentriage serve --judge-mode
-```
 
 ## Security And Privacy
 
