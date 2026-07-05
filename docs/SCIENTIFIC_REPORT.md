@@ -28,8 +28,8 @@ The evidence command writes `reports/run_TIMESTAMP/` with `report.md`,
 
 ## Primary Result
 
-The headline benchmark reduces modeled cost from $0.08892 to $0.00172, a
-98.1% reduction versus an always-`gemini-2.5-pro` baseline.
+The headline benchmark reduces modeled cost from $0.08396 to $0.00196, a
+97.7% reduction versus an always-`gemini-2.5-pro` baseline.
 
 ## Reproduce
 

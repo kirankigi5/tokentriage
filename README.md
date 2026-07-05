@@ -11,7 +11,7 @@ sampling, optional OpenRouter rescue, and a final decision receipt.
 The default demo runs locally with Ollama. OpenRouter is optional and is only
 used when configured for policy-preferred cloud routes or verifier rescue.
 
-> **Headline result:** 98.1% lower modeled inference cost versus an
+> **Headline result:** 97.7% lower modeled inference cost versus an
 > always-frontier Gemini baseline on the bundled business workload.
 
 ## Demo Surfaces
@@ -278,8 +278,8 @@ measured against sending every task to the frontier Gemini baseline.
 
 | Metric | Always-frontier baseline | TokenTriage | Result |
 |---|---:|---:|---:|
-| Modeled cost | $0.08892 | $0.00172 | **98.1% lower** |
-| Cache hits | 0 | 3 / 30 | free reuse |
+| Modeled cost | $0.08396 | $0.00196 | **97.7% lower** |
+| Cache hits | 0 | 0 / 30 | cache disabled in default evidence policy |
 | Verification escalations | n/a | 1 | quality protected |
 | Cloud keys required | yes | no | local-first demo |
 

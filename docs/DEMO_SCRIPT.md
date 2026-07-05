@@ -3,7 +3,7 @@
 ## 1. Open With The Claim
 
 "TokenTriage is an Agent FinOps control plane. It reduced modeled inference
-cost by 98.1% versus sending every task to a frontier Gemini model."
+cost by 97.7% versus sending every task to a frontier Gemini model."
 
 ## 2. Start The Judge UI
 
