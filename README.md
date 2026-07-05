@@ -92,7 +92,7 @@ Leave this blank for **zero OpenRouter/cloud calls**:
 OPENROUTER_API_KEY=
 ```
 
-Set it only when you want the optional rescue catalog:
+Set `OPENROUTER_API_KEY` to enable the optional rescue catalog:
 
 ```env
 OPENROUTER_API_KEY=sk-or-v1-...
@@ -344,18 +344,18 @@ tokentriage adk-demo "..." # run ADK triage/verifier agents locally
 
 ## Hosting
 
-TokenTriage supports three deployment modes:
+TokenTriage can be deployed in three modes:
 
-1. **Hosted judge replay:** public link with replay data, dashboard proof,
-   architecture, model-picking transitions, and no model runtime required.
-2. **Live local Mac/Ollama demo:** local models run on the developer machine and
-   the TokenTriage UI/API is exposed through a tunnel.
-3. **Full VM stack:** TokenTriage and Ollama run together on one server.
+1. **Replay deployment:** serves seeded judge data, dashboard proof,
+   architecture, model-picking transitions, and evidence pages without live
+   model inference.
+2. **Local Ollama tunnel:** runs local models on the host machine and exposes
+   only the TokenTriage UI/API through a tunnel.
+3. **Full VM stack:** runs TokenTriage and Ollama together on one server.
 
-### Recommended Public Judge Link
+### Replay Deployment
 
-For the public submission link, deploy TokenTriage with deterministic replay
-enabled and persist `tokentriage.db`.
+Seed deterministic replay data and start the server with replay controls:
 
 ```bash
 tokentriage judge-mode
@@ -367,15 +367,15 @@ This mode shows:
 - chat replay with routing trace and model-selection transition
 - dashboard analytics from the seeded decision ledger
 - architecture scenarios
-- evidence without requiring live model inference
+- evidence pages without requiring live model inference
 
-On hosted platforms, make sure `TOKENTRIAGE_DB_PATH` points to persistent
-storage if the platform supports it. If not, seed replay during container start
-or before creating the deployment image.
+For persistent replay history, store `tokentriage.db` on a persistent volume or
+seed replay data during container startup.
 
-### Live Mac/Ollama Demo
+### Local Ollama Tunnel
 
-For a monitored live demo from your Mac:
+Run TokenTriage and Ollama on the same local host, then expose only the
+TokenTriage server:
 
 ```bash
 ollama serve
@@ -384,12 +384,11 @@ cloudflared tunnel --url http://localhost:8000
 ```
 
 Only tunnel `localhost:8000`; Ollama can remain private on `localhost:11434`.
-Keep `OPENROUTER_API_KEY` blank for a fully local run.
+Leave `OPENROUTER_API_KEY` blank for a fully local run.
 
-### Full Local-First Demo On A VM
+### Full VM Stack
 
-This is the best deployment for the project story because it hosts TokenTriage
-and Ollama together.
+Run TokenTriage and Ollama together with Docker Compose:
 
 ```bash
 docker compose up --build
@@ -400,14 +399,13 @@ docker compose exec ollama ollama pull qwen2.5:14b
 docker compose exec ollama ollama pull nomic-embed-text
 ```
 
-Then expose port `8000` through your VM firewall or reverse proxy.
+Expose port `8000` through the server firewall or reverse proxy.
 
 ### Lightweight Hosted UI/API
 
-Cloud Run, Render, Railway, or Fly can run the FastAPI container. This is good
-for `/chat`, `/dashboard`, `/architecture`, OpenRouter-enabled mode, and
-judge replay. It does not include local Ollama unless you run Ollama separately
-and set `OLLAMA_HOST`.
+Cloud Run, Render, Railway, or Fly can run the FastAPI container for `/chat`,
+`/dashboard`, `/architecture`, OpenRouter-enabled mode, and replay deployment.
+Local Ollama requires a reachable `OLLAMA_HOST`.
 
 Build:
 
@@ -416,7 +414,7 @@ docker build -t tokentriage .
 docker run --env-file .env -p 8000:8000 tokentriage
 ```
 
-For hosted replay, run the app with:
+For replay deployment, run the app with:
 
 ```bash
 tokentriage serve --judge-mode
