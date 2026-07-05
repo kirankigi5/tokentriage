@@ -1,0 +1,1278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TokenTriage - Dashboard</title>
+<style>
+  :root{
+    color-scheme:light;
+    --paper:#f8f5ee;
+    --panel:#fffdf8;
+    --panel-2:#f0eee7;
+    --ink:#17201c;
+    --muted:#6a706b;
+    --rule:#d7d0c2;
+    --cache:#168a68;
+    --qwen:#385acb;
+    --pro:#c24a3a;
+    --verify:#a66b11;
+    --shadow:0 18px 55px rgba(28,32,28,.10);
+    --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    --sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      color-scheme:dark;
+      --paper:#151512;
+      --panel:#1e1e19;
+      --panel-2:#28271f;
+      --ink:#f1efe7;
+      --muted:#aaa59a;
+      --rule:#3b382f;
+      --cache:#46c59c;
+      --qwen:#7f9aff;
+      --pro:#ff846f;
+      --verify:#e1a540;
+      --shadow:0 18px 55px rgba(0,0,0,.30);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px) 0 0/42px 42px,
+      linear-gradient(0deg, color-mix(in srgb, var(--rule) 28%, transparent) 1px, transparent 1px) 0 0/42px 42px,
+      linear-gradient(135deg, color-mix(in srgb, var(--cache) 7%, transparent), transparent 34%),
+      var(--paper);
+    color:var(--ink);
+    font:14px/1.45 var(--sans);
+    overflow:hidden;
+    padding:14px;
+  }
+  a{color:inherit}
+  button,select,input{font:inherit}
+  .shell{
+    width:min(1500px,100%);
+    height:calc(100dvh - 28px);
+    min-height:0;
+    margin:0 auto;
+    display:grid;
+    grid-template-columns:236px minmax(0,1fr);
+    gap:12px;
+  }
+  .sidebar{
+    min-height:0;
+    display:grid;
+    grid-template-rows:auto auto auto 1fr auto;
+    gap:12px;
+    padding:12px;
+    border:1px solid var(--rule);
+    border-radius:12px;
+    background:color-mix(in srgb, var(--panel) 94%, transparent);
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+  }
+  .brand-mark{
+    width:36px;
+    height:36px;
+    border-radius:8px;
+    box-shadow:4px 4px 0 color-mix(in srgb, var(--cache) 28%, transparent);
+    object-fit:cover;
+  }
+  h1{
+    margin:0;
+    font-size:17px;
+    line-height:1.05;
+  }
+  .brand p{
+    margin:3px 0 0;
+    color:var(--muted);
+    font:11px/1.2 var(--mono);
+  }
+  .link-button,
+  .tab-button,
+  .refresh-button{
+    min-width:0;
+    height:36px;
+    display:grid;
+    place-items:center;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:color-mix(in srgb, var(--panel) 86%, transparent);
+    color:var(--ink);
+    text-decoration:none;
+    font:800 12px/1 var(--mono);
+    cursor:pointer;
+  }
+  .link-button:hover,
+  .tab-button:hover,
+  .refresh-button:hover{background:var(--panel-2)}
+  .link-button.primary{
+    border-color:var(--ink);
+    background:var(--ink);
+    color:var(--paper);
+  }
+  .link-button.is-active,
+  .tab-button.is-active{
+    border-color:color-mix(in srgb, var(--cache) 46%, var(--rule));
+    color:var(--cache);
+    background:color-mix(in srgb, var(--cache) 8%, var(--panel));
+  }
+  .sidebar-nav,
+  .dashboard-nav{
+    display:grid;
+    gap:8px;
+  }
+  .dashboard-nav{
+    padding-top:4px;
+    border-top:1px solid var(--rule);
+  }
+  .side-title{
+    margin:0 0 2px;
+    color:var(--muted);
+    font:900 10px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .side-foot{
+    display:grid;
+    gap:8px;
+  }
+  .stamp{
+    color:var(--muted);
+    text-align:center;
+    font:800 11px/1.2 var(--mono);
+  }
+  .main{
+    min-height:0;
+    display:grid;
+    grid-template-rows:auto auto minmax(0,1fr);
+    gap:12px;
+  }
+  .topbar{
+    min-height:54px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:0 2px;
+  }
+  .title-block{
+    min-width:0;
+  }
+  .title-block h2{
+    margin:0;
+    font-size:22px;
+    line-height:1.05;
+    letter-spacing:0;
+  }
+  .title-block p{
+    margin:4px 0 0;
+    color:var(--muted);
+    font:12px/1.2 var(--mono);
+  }
+  .toolbar{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .select-wrap{
+    height:36px;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:var(--panel);
+    padding:0 10px;
+  }
+  .select-wrap span{
+    color:var(--muted);
+    font:900 10px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  select{
+    border:0;
+    outline:0;
+    background:transparent;
+    color:var(--ink);
+    font:800 12px/1 var(--mono);
+  }
+  .kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(6,minmax(0,1fr));
+    gap:10px;
+  }
+  .kpi{
+    min-width:0;
+    min-height:86px;
+    display:grid;
+    align-content:center;
+    gap:7px;
+    border:1px solid var(--rule);
+    border-radius:10px;
+    background:var(--panel);
+    padding:12px;
+    box-shadow:0 8px 24px rgba(28,32,28,.05);
+  }
+  .kpi span,
+  .section-head span,
+  th{
+    color:var(--muted);
+    font:900 10px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .kpi b{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font:900 clamp(18px,2.5vw,28px)/1 var(--mono);
+    font-variant-numeric:tabular-nums;
+  }
+  .kpi.save b{color:var(--cache)}
+  .kpi.warn b{color:var(--verify)}
+  .kpi.danger b{color:var(--pro)}
+  .view-shell{
+    min-height:0;
+    overflow:hidden;
+    border:1px solid var(--rule);
+    border-radius:12px;
+    background:color-mix(in srgb, var(--panel) 94%, transparent);
+    box-shadow:var(--shadow);
+  }
+  .view{
+    height:100%;
+    min-height:0;
+    overflow:auto;
+    padding:14px;
+  }
+  .view[hidden]{display:none}
+  .section-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:12px;
+  }
+  .section-grid.two{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  }
+  .section-grid.four{
+    grid-template-columns:repeat(4,minmax(0,1fr));
+  }
+  .panel{
+    min-width:0;
+    border:1px solid var(--rule);
+    border-radius:10px;
+    background:var(--panel);
+    overflow:hidden;
+  }
+  .panel.pad{padding:14px}
+  .section-head{
+    min-height:42px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    border-bottom:1px solid var(--rule);
+    padding:0 12px;
+  }
+  .section-head b{
+    font:900 13px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .summary-value{
+    display:block;
+    margin-top:8px;
+    font:900 26px/1 var(--mono);
+    font-variant-numeric:tabular-nums;
+  }
+  .summary-copy{
+    margin:8px 0 0;
+    color:var(--muted);
+    font-size:12px;
+  }
+  .analytics-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+  }
+  .metric-card{
+    min-width:0;
+    display:grid;
+    gap:10px;
+    border:1px solid var(--rule);
+    border-radius:10px;
+    background:var(--panel);
+    padding:12px;
+  }
+  .metric-card span{
+    color:var(--muted);
+    font:900 10px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .metric-card b{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font:900 20px/1 var(--mono);
+    font-variant-numeric:tabular-nums;
+  }
+  .metric-card p{
+    margin:0;
+    color:var(--muted);
+    font-size:12px;
+  }
+  .split-list{
+    display:grid;
+    gap:8px;
+    padding:12px;
+  }
+  .split-row{
+    display:grid;
+    grid-template-columns:112px minmax(0,1fr) 54px;
+    align-items:center;
+    gap:10px;
+    font:900 11px/1 var(--mono);
+  }
+  .split-row span{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .split-row span:last-child{
+    color:var(--muted);
+    text-align:right;
+  }
+  .burn{
+    display:grid;
+    gap:9px;
+    margin-top:14px;
+  }
+  .burn-track,
+  .bar{
+    height:10px;
+    overflow:hidden;
+    border-radius:999px;
+    background:color-mix(in srgb, var(--rule) 72%, transparent);
+  }
+  .burn-track{height:16px;border:1px solid var(--ink)}
+  .burn-fill,
+  .bar-fill{
+    width:0%;
+    height:100%;
+    border-radius:inherit;
+    background:linear-gradient(90deg,var(--cache),color-mix(in srgb,var(--qwen) 42%,var(--cache)));
+    transition:width .35s ease;
+  }
+  .burn.hot .burn-fill{background:linear-gradient(90deg,var(--verify),var(--pro))}
+  .burn-label{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    color:var(--muted);
+    font:800 11px/1 var(--mono);
+  }
+  .card-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+  }
+  .model-row{
+    min-width:0;
+    min-height:112px;
+    display:grid;
+    grid-template-columns:44px minmax(0,1fr);
+    grid-template-rows:auto auto;
+    gap:8px 10px;
+    align-items:center;
+    border:1px solid var(--rule);
+    border-radius:10px;
+    background:var(--panel);
+    padding:12px;
+  }
+  .model-row.is-active{
+    border-color:color-mix(in srgb, var(--accent) 64%, var(--rule));
+    background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, var(--panel)), var(--panel));
+  }
+  .model-logo,
+  .tiny-logo{
+    display:grid;
+    place-items:center;
+    border-radius:8px;
+    color:white;
+    background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 62%,black));
+    font:900 11px/1 var(--mono);
+  }
+  .model-logo{width:44px;height:44px}
+  .tiny-logo{width:30px;height:30px;flex:0 0 30px}
+  .model-logo img,
+  .tiny-logo img{
+    width:72%;
+    height:72%;
+    object-fit:contain;
+    display:block;
+    background:white;
+    border-radius:6px;
+    padding:2px;
+  }
+  .model-copy{
+    min-width:0;
+  }
+  .model-copy b,
+  .model-copy span{
+    display:block;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .model-copy b{font-size:13px}
+  .model-copy span{
+    margin-top:3px;
+    color:var(--muted);
+    font:800 10px/1.2 var(--mono);
+  }
+  .model-count{
+    grid-column:1/-1;
+    display:grid;
+    gap:7px;
+  }
+  .model-count-row{
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    font:900 12px/1 var(--mono);
+  }
+  .task-card{
+    min-height:92px;
+    display:grid;
+    align-content:center;
+    gap:10px;
+    border:1px solid var(--rule);
+    border-radius:10px;
+    background:var(--panel);
+    padding:12px;
+  }
+  .task-card b{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font:900 13px/1 var(--mono);
+    text-transform:capitalize;
+  }
+  .task-card span{
+    color:var(--muted);
+    font:800 11px/1 var(--mono);
+  }
+  .table-tools{
+    display:grid;
+    gap:10px;
+    padding:12px;
+    border-bottom:1px solid var(--rule);
+  }
+  .table-headline{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .table-headline b{
+    font:900 13px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .table-headline span{
+    color:var(--muted);
+    font:900 10px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .control-grid{
+    display:grid;
+    grid-template-columns:minmax(220px,1.25fr) repeat(5,minmax(120px,.72fr)) auto;
+    gap:8px;
+    align-items:center;
+  }
+  .filter{
+    width:100%;
+    height:36px;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:var(--paper);
+    color:var(--ink);
+    padding:0 10px;
+    outline:0;
+  }
+  .control{
+    min-width:0;
+    height:36px;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:var(--paper);
+    color:var(--ink);
+    padding:0 9px;
+    outline:0;
+    font:800 12px/1 var(--mono);
+  }
+  .export-button{
+    height:36px;
+    border:1px solid var(--ink);
+    border-radius:8px;
+    background:var(--ink);
+    color:var(--paper);
+    padding:0 12px;
+    font:900 12px/1 var(--mono);
+    cursor:pointer;
+  }
+  .export-button:hover{filter:brightness(.95)}
+  .table-wrap{
+    overflow:auto;
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+  }
+  th,td{
+    text-align:left;
+    padding:11px 12px;
+    border-bottom:1px solid var(--rule);
+    vertical-align:middle;
+  }
+  td{font-variant-numeric:tabular-nums}
+  .task-cell{
+    min-width:260px;
+    max-width:520px;
+  }
+  .task-title{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .task-meta{
+    margin-top:3px;
+    color:var(--muted);
+    font:800 11px/1.2 var(--mono);
+  }
+  .tier-cell{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    min-width:118px;
+  }
+  .tier-name{
+    min-width:0;
+    display:grid;
+    gap:2px;
+  }
+  .tier-name b,
+  .tier-name span{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .tier-name b{font:900 12px/1 var(--mono)}
+  .tier-name span{color:var(--muted);font:800 10px/1 var(--mono)}
+  .pill{
+    display:inline-grid;
+    place-items:center;
+    min-height:26px;
+    padding:0 9px;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:var(--panel-2);
+    font:900 11px/1 var(--mono);
+    white-space:nowrap;
+  }
+  .pill.pass{color:var(--cache);border-color:color-mix(in srgb,var(--cache) 38%,var(--rule))}
+  .pill.fail{color:var(--pro);border-color:color-mix(in srgb,var(--pro) 38%,var(--rule))}
+  .pill.warn{color:var(--verify);border-color:color-mix(in srgb,var(--verify) 38%,var(--rule))}
+  .pill.cloud{color:var(--qwen);border-color:color-mix(in srgb,var(--qwen) 38%,var(--rule))}
+  .pill.cache{color:var(--cache);border-color:color-mix(in srgb,var(--cache) 38%,var(--rule))}
+  .empty{
+    padding:22px;
+    color:var(--muted);
+    font:800 12px/1.4 var(--mono);
+  }
+  @media (max-width:1180px){
+    .kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .section-grid,
+    .section-grid.two,
+    .section-grid.four,
+    .analytics-grid{grid-template-columns:1fr 1fr}
+    .card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .control-grid{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width:860px){
+    body{overflow:auto}
+    .shell{
+      height:auto;
+      min-height:calc(100dvh - 28px);
+      grid-template-columns:1fr;
+    }
+    .sidebar{
+      grid-template-rows:auto;
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .sidebar-nav,
+    .dashboard-nav{grid-template-columns:repeat(3,minmax(0,1fr));flex:1 1 420px}
+    .side-foot{flex:1 1 160px}
+    .main{min-height:760px}
+  }
+  @media (max-width:620px){
+    body{padding:10px}
+    .topbar{align-items:flex-start;flex-direction:column}
+    .toolbar,.table-tools{width:100%;align-items:stretch;flex-direction:column}
+    .select-wrap,.refresh-button,.filter{width:100%}
+    .kpi-grid,.card-grid,.analytics-grid,.section-grid.four,.control-grid{grid-template-columns:1fr}
+    .sidebar-nav,.dashboard-nav{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <img class="brand-mark" src="/imgs/logos/app_logo.png" alt="TokenTriage">
+      <div>
+        <h1>TokenTriage</h1>
+        <p>dashboard console</p>
+      </div>
+    </div>
+
+    <a class="link-button primary" href="/chat">New chat</a>
+
+    <nav class="sidebar-nav" aria-label="Primary navigation">
+      <a class="link-button" href="/chat">Chat</a>
+      <a class="link-button is-active" href="/dashboard">Dashboard</a>
+      <a class="link-button" href="/architecture">Architecture</a>
+    </nav>
+
+    <nav class="dashboard-nav" aria-label="Dashboard sections">
+      <div class="side-title">Sections</div>
+      <button class="tab-button is-active" type="button" data-view="overview">Overview</button>
+      <button class="tab-button" type="button" data-view="analytics">Analytics</button>
+      <button class="tab-button" type="button" data-view="models">Models</button>
+      <button class="tab-button" type="button" data-view="tasks">Tasks</button>
+      <button class="tab-button" type="button" data-view="decisions">Decisions</button>
+    </nav>
+
+    <div class="side-foot">
+      <button class="refresh-button" type="button" id="refresh">Refresh</button>
+      <div class="stamp" id="stamp">Connecting</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="title-block">
+        <h2>Dashboard</h2>
+        <p>Spend, latency, routing quality, cache, and verifier evidence</p>
+      </div>
+      <div class="toolbar">
+        <label class="select-wrap">
+          <span>Window</span>
+          <select id="windowHours">
+            <option value="1">1h</option>
+            <option value="24" selected>24h</option>
+            <option value="168">7d</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <section class="kpi-grid" aria-label="Key metrics">
+      <div class="kpi"><span>Requests</span><b id="req">0</b></div>
+      <div class="kpi"><span>Spend</span><b id="cost">$0.0000</b></div>
+      <div class="kpi"><span>Always-Pro Base</span><b id="base">$0.0000</b></div>
+      <div class="kpi save"><span>Savings</span><b id="save">0.0%</b></div>
+      <div class="kpi"><span>Avg Dispatch</span><b id="avgLatency">0 ms</b></div>
+      <div class="kpi warn"><span>P95 Dispatch</span><b id="p95Latency">0 ms</b></div>
+    </section>
+
+    <section class="view-shell">
+      <div class="view" id="view-overview">
+        <div class="section-grid">
+          <section class="panel pad">
+            <div class="section-head"><b>Budget</b><span id="burnCap">$5.00 cap</span></div>
+            <span class="summary-value" id="burnAmount">$0.0000</span>
+            <p class="summary-copy">Daily spend burn against the configured budget cap.</p>
+            <div class="burn" id="burn">
+              <div class="burn-track"><div class="burn-fill" id="burnfill"></div></div>
+              <div class="burn-label"><span id="burnPct">0.0%</span><span id="cacheEsc">0 cache / 0 escalations</span></div>
+            </div>
+          </section>
+
+          <section class="panel pad">
+            <div class="section-head"><b>Guardrail</b><span>security</span></div>
+            <span class="summary-value" id="quarantineCount" style="color:var(--pro)">0</span>
+            <p class="summary-copy">Requests quarantined before cache lookup or model dispatch.</p>
+          </section>
+
+          <section class="panel pad">
+            <div class="section-head"><b>Verifier</b><span>quality</span></div>
+            <span class="summary-value" id="verifierPassRate">0%</span>
+            <p class="summary-copy" id="verifierStats">0 pass / 0 fail</p>
+          </section>
+        </div>
+
+        <div class="section-grid two" style="margin-top:12px">
+          <section class="panel pad">
+            <div class="section-head"><b>Cache Efficiency</b><span>T0</span></div>
+            <span class="summary-value" id="cacheRate">0.0%</span>
+            <p class="summary-copy">Semantic cache hit rate for the selected window.</p>
+          </section>
+          <section class="panel pad">
+            <div class="section-head"><b>Escalation Rate</b><span>verifier</span></div>
+            <span class="summary-value" id="escRate">0.0%</span>
+            <p class="summary-copy">Share of decisions escalated to a stronger tier.</p>
+          </section>
+        </div>
+      </div>
+
+      <div class="view" id="view-analytics" hidden>
+        <div class="analytics-grid">
+          <section class="metric-card">
+            <span>Local Share</span>
+            <b id="localShare">0.0%</b>
+            <p>Requests completed by cache or local Ollama tiers.</p>
+          </section>
+          <section class="metric-card">
+            <span>OpenRouter Share</span>
+            <b id="cloudShare">0.0%</b>
+            <p>Cloud rescue or policy-preferred calls.</p>
+          </section>
+          <section class="metric-card">
+            <span>Avg Cost</span>
+            <b id="avgCost">$0.000000</b>
+            <p>Mean spend per routed decision.</p>
+          </section>
+          <section class="metric-card">
+            <span>Top Task</span>
+            <b id="topTask">none</b>
+            <p id="topTaskCopy">No routed tasks in this window.</p>
+          </section>
+        </div>
+
+        <div class="section-grid two" style="margin-top:12px">
+          <section class="panel">
+            <div class="section-head"><b>Provider Split</b><span>local vs cloud</span></div>
+            <div class="split-list" id="providerSplit"></div>
+          </section>
+          <section class="panel">
+            <div class="section-head"><b>Quality Split</b><span>verifier</span></div>
+            <div class="split-list" id="qualitySplit"></div>
+          </section>
+        </div>
+
+        <div class="section-grid two" style="margin-top:12px">
+          <section class="panel">
+            <div class="section-head"><b>Latency Bands</b><span>dispatch</span></div>
+            <div class="split-list" id="latencyBands"></div>
+          </section>
+          <section class="panel">
+            <div class="section-head"><b>Savings Bands</b><span>baseline delta</span></div>
+            <div class="split-list" id="savingsBands"></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="view" id="view-models" hidden>
+        <section class="panel">
+          <div class="section-head">
+            <b>Model Utilization</b>
+            <span id="modelTotal">0 routed requests</span>
+          </div>
+          <div class="card-grid" id="models" style="padding:12px"></div>
+        </section>
+      </div>
+
+      <div class="view" id="view-tasks" hidden>
+        <section class="panel">
+          <div class="section-head">
+            <b>Task Analytics</b>
+            <span id="taskTotal">0 tasks processed</span>
+          </div>
+          <div class="card-grid" id="taskGrid" style="padding:12px"></div>
+        </section>
+      </div>
+
+      <div class="view" id="view-decisions" hidden>
+        <section class="panel">
+          <div class="table-tools">
+            <div class="table-headline">
+              <b>Decision Feed</b>
+              <span id="decisionTotal">most recent first</span>
+            </div>
+            <div class="control-grid">
+              <input class="filter" id="filter" placeholder="Search task, type, tier, model">
+              <select class="control" id="typeFilter"><option value="all">All types</option></select>
+              <select class="control" id="tierFilter"><option value="all">All tiers</option></select>
+              <select class="control" id="providerFilter">
+                <option value="all">All providers</option>
+                <option value="cache">Cache</option>
+                <option value="local">Local</option>
+                <option value="openrouter">OpenRouter</option>
+              </select>
+              <select class="control" id="verifyFilter">
+                <option value="all">All verify</option>
+                <option value="pass">Pass</option>
+                <option value="fail">Fail</option>
+                <option value="sampled">Sampled</option>
+                <option value="not_sampled">Not sampled</option>
+                <option value="escalated">Escalated</option>
+                <option value="error">Error</option>
+              </select>
+              <select class="control" id="sortFilter">
+                <option value="time_desc">Newest first</option>
+                <option value="time_asc">Oldest first</option>
+                <option value="latency_desc">Slowest first</option>
+                <option value="cost_desc">Highest cost</option>
+                <option value="savings_desc">Best savings</option>
+                <option value="tier_asc">Tier A-Z</option>
+              </select>
+              <button class="export-button" type="button" id="exportCsv">Export</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th>Type</th>
+                  <th>Provider</th>
+                  <th>Model</th>
+                  <th>Cost</th>
+                  <th>Savings</th>
+                  <th>Latency</th>
+                  <th>Verify</th>
+                </tr>
+              </thead>
+              <tbody id="feed">
+                <tr><td colspan="8"><div class="empty">Waiting for routing decisions.</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const DAILY_CAP = 5.00;
+const MODEL_STACK = [
+  {tier:'T0', name:'Nomic Embed', detail:'semantic cache', logo:'NE', img:'/imgs/logos/nomic.png', accent:'var(--cache)'},
+  {tier:'T1', name:'Qwen 2.5', detail:'3B local', logo:'Q3', img:'/imgs/logos/qwen.png', accent:'var(--cache)'},
+  {tier:'T2', name:'Qwen 2.5', detail:'7B local', logo:'Q7', img:'/imgs/logos/qwen.png', accent:'var(--qwen)'},
+  {tier:'T3', name:'Qwen 2.5', detail:'14B local', logo:'Q14', img:'/imgs/logos/qwen.png', accent:'var(--pro)'},
+  {tier:'T4', name:'Gemma 31B', detail:'OpenRouter general', logo:'G31', img:'/imgs/logos/gemma.jpg', accent:'var(--verify)'},
+  {tier:'T5', name:'gpt-oss 20B', detail:'OpenRouter fast', logo:'OSS', img:'/imgs/logos/openai.webp', accent:'var(--verify)'},
+  {tier:'T6', name:'Qwen Next 80B', detail:'OpenRouter reasoning', logo:'Q80', img:'/imgs/logos/qwen.png', accent:'var(--qwen)'},
+  {tier:'T7', name:'Qwen Coder', detail:'OpenRouter coding', logo:'QC', img:'/imgs/logos/qwen.png', accent:'var(--qwen)'},
+];
+let lastData = null;
+let filters = {
+  q: '',
+  type: 'all',
+  tier: 'all',
+  provider: 'all',
+  verify: 'all',
+  sort: 'time_desc',
+};
+
+const el = id => document.getElementById(id);
+const usd = (v, digits = 4) => '$' + Number(v || 0).toFixed(digits);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
+  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+}[c]));
+const fmtTime = ts => ts ? new Date(ts * 1000).toLocaleTimeString([], {
+  hour:'2-digit', minute:'2-digit', second:'2-digit'
+}) : '';
+
+function modelForTier(tier){
+  return MODEL_STACK.find(m => m.tier === tier) || {
+    tier:String(tier || ''),
+    name:'TokenTriage',
+    detail:'routed',
+    logo:'TT',
+    accent:'var(--qwen)',
+  };
+}
+
+function providerForTier(tier){
+  if(tier === 'T0') return 'cache';
+  if(['T4','T5','T6','T7'].includes(String(tier || ''))) return 'openrouter';
+  return 'local';
+}
+
+function providerLabel(provider){
+  return provider === 'openrouter' ? 'OpenRouter' : provider === 'cache' ? 'Cache' : 'Local';
+}
+
+function rowSavings(row){
+  const base = Number(row.baseline_cost_usd || 0);
+  const cost = Number(row.cost_usd || 0);
+  return base > 0 ? 100 * (1 - cost / base) : 0;
+}
+
+function verifyState(row){
+  if(row.error) return 'error';
+  if(row.escalated_to) return 'escalated';
+  if(row.verdict === 'pass') return 'pass';
+  if(row.verdict === 'fail') return 'fail';
+  if(Number(row.verified || 0) > 0) return 'sampled';
+  return 'not_sampled';
+}
+
+function logoHtml(model){
+  return model.img ? `<img src="${esc(model.img)}" alt="" loading="lazy">` : esc(model.logo);
+}
+
+function renderSplit(id, rows, total){
+  const max = Math.max(1, ...rows.map(r => Number(r.value || 0)));
+  const denom = Math.max(1, Number(total || rows.reduce((sum, r) => sum + Number(r.value || 0), 0)));
+  el(id).innerHTML = rows.map(r => {
+    const value = Number(r.value || 0);
+    const pct = 100 * value / denom;
+    const width = 100 * value / max;
+    return `<div class="split-row">
+      <span>${esc(r.label)}</span>
+      <div class="bar"><div class="bar-fill" style="width:${width.toFixed(1)}%"></div></div>
+      <span>${pct.toFixed(1)}%</span>
+    </div>`;
+  }).join('') || '<div class="empty">No data yet.</div>';
+}
+
+function setView(name){
+  document.querySelectorAll('.tab-button').forEach(btn => {
+    btn.classList.toggle('is-active', btn.dataset.view === name);
+  });
+  document.querySelectorAll('.view').forEach(view => {
+    view.hidden = view.id !== `view-${name}`;
+  });
+}
+
+function renderKpis(data){
+  const reqs = Number(data.requests || 0);
+  const cacheHits = Number(data.cache_hits || 0);
+  const escalations = Number(data.escalations || 0);
+  el('req').textContent = reqs;
+  el('cost').textContent = usd(data.cost_usd);
+  el('base').textContent = usd(data.baseline_usd);
+  el('save').textContent = `${Number(data.savings_pct || 0).toFixed(1)}%`;
+  el('avgLatency').textContent = `${Number(data.avg_dispatch_latency_ms || 0).toFixed(0)} ms`;
+  el('p95Latency').textContent = `${Number(data.p95_dispatch_latency_ms || 0).toFixed(0)} ms`;
+  el('cacheRate').textContent = reqs ? `${(100 * cacheHits / reqs).toFixed(1)}%` : '0.0%';
+  el('escRate').textContent = reqs ? `${(100 * escalations / reqs).toFixed(1)}%` : '0.0%';
+}
+
+function renderOverview(data){
+  const reqs = Number(data.requests || 0);
+  const cacheHits = Number(data.cache_hits || 0);
+  const escalations = Number(data.escalations || 0);
+  const spent = Number(data.budget_spent_today || 0);
+  const pct = Math.min(100, 100 * spent / DAILY_CAP);
+  el('burnAmount').textContent = usd(spent);
+  el('burnCap').textContent = `${usd(DAILY_CAP,2)} cap`;
+  el('burnfill').style.width = `${pct.toFixed(1)}%`;
+  el('burnPct').textContent = `${pct.toFixed(1)}%`;
+  el('burn').classList.toggle('hot', pct > 85);
+  el('cacheEsc').textContent = `${cacheHits} cache / ${escalations} escalations`;
+  el('quarantineCount').textContent = Number(data.quarantined || 0);
+  const passes = Number((data.verifier_stats || {}).pass || 0);
+  const fails = Number((data.verifier_stats || {}).fail || 0);
+  const total = passes + fails;
+  el('verifierPassRate').textContent = total ? `${Math.round(100 * passes / total)}%` : '0%';
+  el('verifierStats').textContent = `${passes} pass / ${fails} fail`;
+  el('cacheRate').textContent = reqs ? `${(100 * cacheHits / reqs).toFixed(1)}%` : '0.0%';
+  el('escRate').textContent = reqs ? `${(100 * escalations / reqs).toFixed(1)}%` : '0.0%';
+}
+
+function renderAnalytics(data){
+  const rows = data.recent || [];
+  const reqs = Math.max(1, Number(data.requests || 0));
+  const providerCounts = {cache:0, local:0, openrouter:0};
+  const qualityCounts = {pass:0, fail:0, sampled:0, not_sampled:0, escalated:0, error:0};
+  const latencyBands = {fast:0, normal:0, slow:0, timeout:0};
+  const savingsBands = {free:0, high:0, medium:0, low:0};
+
+  Object.entries(data.tier_utilization || {}).forEach(([tier, count]) => {
+    providerCounts[providerForTier(tier)] += Number(count || 0);
+  });
+
+  rows.forEach(row => {
+    qualityCounts[verifyState(row)] += 1;
+    const latency = Number(row.dispatch_latency_ms || 0);
+    if(latency <= 1000) latencyBands.fast += 1;
+    else if(latency <= 4000) latencyBands.normal += 1;
+    else if(latency <= 15000) latencyBands.slow += 1;
+    else latencyBands.timeout += 1;
+
+    const savings = rowSavings(row);
+    if(Number(row.cost_usd || 0) === 0) savingsBands.free += 1;
+    else if(savings >= 95) savingsBands.high += 1;
+    else if(savings >= 50) savingsBands.medium += 1;
+    else savingsBands.low += 1;
+  });
+
+  const localDone = providerCounts.cache + providerCounts.local;
+  el('localShare').textContent = `${(100 * localDone / reqs).toFixed(1)}%`;
+  el('cloudShare').textContent = `${(100 * providerCounts.openrouter / reqs).toFixed(1)}%`;
+  el('avgCost').textContent = usd(Number(data.cost_usd || 0) / reqs, 6);
+
+  const taskEntries = Object.entries(data.task_types || {}).sort((a,b) => Number(b[1]) - Number(a[1]));
+  const [topType, topCount] = taskEntries[0] || ['none', 0];
+  el('topTask').textContent = String(topType).replace(/_/g, ' ');
+  el('topTaskCopy').textContent = topCount ? `${topCount} decisions in this window.` : 'No routed tasks in this window.';
+
+  renderSplit('providerSplit', [
+    {label:'Cache', value:providerCounts.cache},
+    {label:'Local', value:providerCounts.local},
+    {label:'OpenRouter', value:providerCounts.openrouter},
+  ], data.requests || 0);
+  renderSplit('qualitySplit', [
+    {label:'Pass', value:qualityCounts.pass},
+    {label:'Fail', value:qualityCounts.fail},
+    {label:'Escalated', value:qualityCounts.escalated},
+    {label:'Sampled', value:qualityCounts.sampled},
+    {label:'Not sampled', value:qualityCounts.not_sampled},
+    {label:'Error', value:qualityCounts.error},
+  ], rows.length);
+  renderSplit('latencyBands', [
+    {label:'<= 1s', value:latencyBands.fast},
+    {label:'1-4s', value:latencyBands.normal},
+    {label:'4-15s', value:latencyBands.slow},
+    {label:'> 15s', value:latencyBands.timeout},
+  ], rows.length);
+  renderSplit('savingsBands', [
+    {label:'Free', value:savingsBands.free},
+    {label:'>= 95%', value:savingsBands.high},
+    {label:'50-95%', value:savingsBands.medium},
+    {label:'< 50%', value:savingsBands.low},
+  ], rows.length);
+}
+
+function renderModels(util, requests){
+  const total = Math.max(1, Number(requests || 0));
+  const maxCount = Math.max(1, ...MODEL_STACK.map(m => Number((util || {})[m.tier] || 0)));
+  el('modelTotal').textContent = `${Number(requests || 0)} routed requests`;
+  el('models').innerHTML = MODEL_STACK.map(m => {
+    const count = Number((util || {})[m.tier] || 0);
+    const pct = 100 * count / total;
+    const width = 100 * count / maxCount;
+    return `<div class="model-row ${count ? 'is-active' : ''}" style="--accent:${m.accent}">
+      <div class="model-logo">${logoHtml(m)}</div>
+      <div class="model-copy">
+        <b>${esc(m.name)}</b>
+        <span>${esc(m.tier)} · ${esc(m.detail)}</span>
+      </div>
+      <div class="model-count">
+        <div class="model-count-row"><span>${count}</span><span>${pct.toFixed(1)}%</span></div>
+        <div class="bar"><div class="bar-fill" style="width:${width.toFixed(1)}%"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderTasks(types, requests){
+  const entries = Object.entries(types || {});
+  const total = Math.max(1, Number(requests || 0));
+  const maxCount = Math.max(1, ...entries.map(([,count]) => Number(count || 0)));
+  el('taskTotal').textContent = `${Number(requests || 0)} tasks processed`;
+  if(!entries.length){
+    el('taskGrid').innerHTML = '<div class="empty">No task data yet.</div>';
+    return;
+  }
+  el('taskGrid').innerHTML = entries.map(([type, count]) => {
+    const n = Number(count || 0);
+    const pct = 100 * n / total;
+    const width = 100 * n / maxCount;
+    return `<div class="task-card">
+      <b>${esc(type).replace(/_/g, ' ')}</b>
+      <span>${n} tasks · ${pct.toFixed(1)}%</span>
+      <div class="bar"><div class="bar-fill" style="width:${width.toFixed(1)}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function syncFilterOptions(rows){
+  const types = [...new Set((rows || []).map(r => r.task_type).filter(Boolean))].sort();
+  const tiers = [...new Set((rows || []).map(r => r.chosen_tier).filter(Boolean))].sort();
+  const selectedType = filters.type;
+  const selectedTier = filters.tier;
+  el('typeFilter').innerHTML = '<option value="all">All types</option>' + types.map(type =>
+    `<option value="${esc(type)}">${esc(String(type).replace(/_/g, ' '))}</option>`
+  ).join('');
+  el('tierFilter').innerHTML = '<option value="all">All tiers</option>' + tiers.map(tier =>
+    `<option value="${esc(tier)}">${esc(tier)}</option>`
+  ).join('');
+  el('typeFilter').value = types.includes(selectedType) ? selectedType : 'all';
+  el('tierFilter').value = tiers.includes(selectedTier) ? selectedTier : 'all';
+  filters.type = el('typeFilter').value;
+  filters.tier = el('tierFilter').value;
+}
+
+function filteredRows(rows){
+  const q = filters.q;
+  const items = (rows || []).filter(row => {
+    const provider = providerForTier(row.chosen_tier);
+    const verify = verifyState(row);
+    const text = [
+      row.task_preview,
+      row.task_type,
+      row.chosen_tier,
+      provider,
+      verify,
+      row.verdict,
+      row.escalated_to,
+      row.error,
+    ].join(' ').toLowerCase();
+    if(q && !text.includes(q)) return false;
+    if(filters.type !== 'all' && row.task_type !== filters.type) return false;
+    if(filters.tier !== 'all' && row.chosen_tier !== filters.tier) return false;
+    if(filters.provider !== 'all' && provider !== filters.provider) return false;
+    if(filters.verify === 'sampled' && Number(row.verified || 0) <= 0) return false;
+    if(filters.verify !== 'all' && filters.verify !== 'sampled' && verify !== filters.verify) return false;
+    return true;
+  });
+  return items.sort((a,b) => {
+    if(filters.sort === 'time_asc') return Number(a.ts || 0) - Number(b.ts || 0);
+    if(filters.sort === 'latency_desc') return Number(b.dispatch_latency_ms || 0) - Number(a.dispatch_latency_ms || 0);
+    if(filters.sort === 'cost_desc') return Number(b.cost_usd || 0) - Number(a.cost_usd || 0);
+    if(filters.sort === 'savings_desc') return rowSavings(b) - rowSavings(a);
+    if(filters.sort === 'tier_asc') return String(a.chosen_tier || '').localeCompare(String(b.chosen_tier || ''));
+    return Number(b.ts || 0) - Number(a.ts || 0);
+  });
+}
+
+function renderFeed(rows){
+  const items = filteredRows(rows);
+  const total = (rows || []).length;
+  el('decisionTotal').textContent = `${items.length} of ${total} visible`;
+  if(!items.length){
+    el('feed').innerHTML = '<tr><td colspan="8"><div class="empty">No matching decisions.</div></td></tr>';
+    return;
+  }
+  el('feed').innerHTML = items.map(r => {
+    const model = modelForTier(r.chosen_tier);
+    const provider = providerForTier(r.chosen_tier);
+    const verify = verifyState(r).replace('_', ' ');
+    const verifyClass = r.error || r.verdict === 'fail' ? 'fail' : r.verdict === 'pass' ? 'pass' : r.escalated_to ? 'warn' : '';
+    const providerClass = provider === 'openrouter' ? 'cloud' : provider === 'cache' ? 'cache' : '';
+    const savings = rowSavings(r);
+    return `<tr>
+      <td class="task-cell">
+        <div class="task-title">${esc(r.task_preview || '')}</div>
+        <div class="task-meta">${esc(fmtTime(r.ts))}</div>
+      </td>
+      <td><span class="pill">${esc(r.task_type || '')}</span></td>
+      <td><span class="pill ${providerClass}">${esc(providerLabel(provider))}</span></td>
+      <td>
+        <div class="tier-cell" style="--accent:${model.accent}">
+          <div class="tiny-logo">${logoHtml(model)}</div>
+          <div class="tier-name">
+            <b>${esc(r.chosen_tier || '')}${r.escalated_to ? ' -> ' + esc(r.escalated_to) : ''}</b>
+            <span>${esc(model.detail)}</span>
+          </div>
+        </div>
+      </td>
+      <td>${usd(r.cost_usd, 6)}</td>
+      <td>${savings.toFixed(1)}%</td>
+      <td>${Number(r.dispatch_latency_ms || 0).toFixed(0)} ms</td>
+      <td><span class="pill ${verifyClass}">${esc(verify)}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function exportCsv(){
+  const rows = filteredRows((lastData && lastData.recent) || []);
+  const header = ['time','task','type','tier','provider','cost_usd','baseline_usd','savings_pct','latency_ms','verify','escalated_to','error'];
+  const csvRows = [header, ...rows.map(r => [
+    r.ts ? new Date(r.ts * 1000).toISOString() : '',
+    r.task_preview || '',
+    r.task_type || '',
+    r.chosen_tier || '',
+    providerForTier(r.chosen_tier),
+    Number(r.cost_usd || 0).toFixed(6),
+    Number(r.baseline_cost_usd || 0).toFixed(6),
+    rowSavings(r).toFixed(1),
+    Number(r.dispatch_latency_ms || 0).toFixed(0),
+    verifyState(r),
+    r.escalated_to || '',
+    r.error || '',
+  ])];
+  const csv = csvRows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `tokentriage-decisions-${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function renderAll(data){
+  lastData = data;
+  syncFilterOptions(data.recent || []);
+  renderKpis(data);
+  renderOverview(data);
+  renderAnalytics(data);
+  renderModels(data.tier_utilization || {}, data.requests || 0);
+  renderTasks(data.task_types || {}, data.requests || 0);
+  renderFeed(data.recent || []);
+}
+
+async function tick(){
+  try{
+    const hours = Number(el('windowHours').value || 24);
+    const res = await fetch(`/api/stats?window_hours=${encodeURIComponent(hours)}`);
+    if(!res.ok) throw new Error('stats unavailable');
+    const data = await res.json();
+    el('stamp').textContent = new Date().toLocaleTimeString();
+    renderAll(data);
+  }catch(e){
+    el('stamp').textContent = 'Offline';
+  }
+}
+
+document.querySelectorAll('.tab-button').forEach(btn => {
+  btn.addEventListener('click', () => setView(btn.dataset.view));
+});
+el('refresh').addEventListener('click', tick);
+el('windowHours').addEventListener('change', tick);
+el('filter').addEventListener('input', e => {
+  filters.q = e.target.value.trim().toLowerCase();
+  renderFeed((lastData && lastData.recent) || []);
+});
+['typeFilter','tierFilter','providerFilter','verifyFilter','sortFilter'].forEach(id => {
+  el(id).addEventListener('change', e => {
+    const key = {
+      typeFilter:'type',
+      tierFilter:'tier',
+      providerFilter:'provider',
+      verifyFilter:'verify',
+      sortFilter:'sort',
+    }[id];
+    filters[key] = e.target.value;
+    renderFeed((lastData && lastData.recent) || []);
+  });
+});
+el('exportCsv').addEventListener('click', exportCsv);
+el('windowHours').addEventListener('change', () => {
+  filters.type = 'all';
+  filters.tier = 'all';
+  renderFeed((lastData && lastData.recent) || []);
+});
+tick();
+setInterval(tick, 3000);
+</script>
+</body>
+</html>
