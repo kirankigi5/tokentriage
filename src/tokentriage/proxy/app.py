@@ -33,9 +33,26 @@ from tokentriage.security.gateway import RateLimiter, SecurityError, gateway_che
 
 app = FastAPI(title="TokenTriage — Inference Cost Engine")
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-_IMGS_DIR = _REPO_ROOT / "imgs"
-if _IMGS_DIR.exists():
+
+def _resolve_imgs_dir() -> Path | None:
+    """Find image assets in source checkouts and installed Docker containers."""
+    candidates = [
+        os.getenv("TOKENTRIAGE_IMGS_DIR"),
+        Path.cwd() / "imgs",
+        Path(__file__).resolve().parents[3] / "imgs",
+        Path("/app/imgs"),
+    ]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        path = Path(candidate)
+        if (path / "logos" / "app_logo.png").exists():
+            return path
+    return None
+
+
+_IMGS_DIR = _resolve_imgs_dir()
+if _IMGS_DIR:
     app.mount("/imgs", StaticFiles(directory=_IMGS_DIR), name="imgs")
 
 _policy: dict = {}
