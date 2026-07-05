@@ -155,7 +155,7 @@ def _load_queries(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
-def run_evidence(queries: Path, out_root: Path) -> Path:
+def run_evidence(queries: Path, out_root: Path, verbose: bool = False) -> Path:
     """Run the full evidence suite and return the run directory."""
     db.init_db()
     policy = load_policy()
@@ -171,13 +171,22 @@ def run_evidence(queries: Path, out_root: Path) -> Path:
     taxonomy_correct = 0
     labelled = 0
 
-    for row in rows:
+    for idx, row in enumerate(rows, 1):
+        if verbose:
+            preview = row["task"].replace("\n", " ")[:88]
+            print(f"[{idx}/{len(rows)}] routing: {preview}", flush=True)
         expected = row.get("expect_type")
         verdict = triage(row["task"])
         if expected:
             labelled += 1
             taxonomy_correct += int(verdict.task_type == expected)
         result = route(row["task"], policy, cache)
+        if verbose:
+            print(
+                f"       -> {result.chosen_tier} / {result.task_type} / "
+                f"{result.dispatch_latency_ms:.0f} ms",
+                flush=True,
+            )
         total_cost += result.cost_usd
         total_baseline += result.baseline_cost_usd
         routing_rows.append({

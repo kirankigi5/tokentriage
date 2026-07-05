@@ -28,10 +28,13 @@ def tier_key(tier_env: str, provider: str | None = None) -> str:
     Per-tier vars still win. Provider-specific fallbacks keep an OpenRouter key
     from accidentally enabling a Gemini tier, and vice versa.
     """
+    p = (provider or "").lower()
+    disable_cloud = os.getenv("TOKENTRIAGE_DISABLE_CLOUD", "").lower()
+    if p in ("openrouter", "openai", "gemini") and disable_cloud in ("1", "true", "yes", "on"):
+        return ""
     direct = os.getenv(tier_env) if tier_env else ""
     if direct:
         return direct
-    p = (provider or "").lower()
     if p == "openrouter":
         return os.getenv("OPENROUTER_API_KEY") or ""
     if p == "openai":

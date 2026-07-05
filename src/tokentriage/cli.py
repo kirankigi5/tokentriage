@@ -103,11 +103,19 @@ def report(window_hours: float = 24.0):
 
 @app.command()
 def evidence(queries: Path = Path("benchmarks/test_queries.jsonl"),
-             out: Path = Path("reports")):
+             out: Path = Path("reports"),
+             allow_cloud: bool = typer.Option(
+                 False,
+                 "--allow-cloud",
+                 help="Allow OpenRouter/OpenAI/Gemini tiers during evidence generation.",
+             )):
     """Generate the evidence bundle: report.md, metrics.json, CSV, dashboard."""
+    if not allow_cloud:
+        os.environ["TOKENTRIAGE_DISABLE_CLOUD"] = "1"
+        typer.echo("Cloud tiers disabled for evidence run. Use --allow-cloud to opt in.")
     from tokentriage.evidence import run_evidence
 
-    run_dir = run_evidence(queries, out)
+    run_dir = run_evidence(queries, out, verbose=True)
     typer.echo(f"Evidence written to {run_dir}")
     typer.echo(f"Latest dashboard: {out / 'latest' / 'dashboard.html'}")
 

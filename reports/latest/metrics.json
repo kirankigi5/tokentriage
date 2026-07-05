@@ -1,0 +1,18 @@
+{
+  "run_id": "run_20260705_172557",
+  "requests": 30,
+  "cost_usd": 0.001962,
+  "baseline_usd": 0.083959,
+  "savings_pct": 97.7,
+  "cache_hits": 0,
+  "escalations": 1,
+  "taxonomy_accuracy": 100.0,
+  "security_blocks": 3,
+  "tier_utilization": {
+    "T1": 14,
+    "T2": 4,
+    "T3": 12
+  },
+  "avg_dispatch_latency_ms": 27371.4,
+  "p95_dispatch_latency_ms": 77778.5
+}
