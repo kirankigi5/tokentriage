@@ -344,13 +344,13 @@ tokentriage adk-demo "..." # run ADK triage/verifier agents locally
 
 ## Hosting
 
-Judging may happen at an unknown time, so do **not** rely on a MacBook staying
-awake for weeks as the only public demo. Use two modes:
+TokenTriage supports three deployment modes:
 
-1. **Reliable hosted judge replay:** public 24/7 link with replay data, dashboard
-   proof, architecture, model-picking transitions, and no model runtime required.
-2. **Live local Mac/Ollama demo:** use this for the recorded video or any time
-   you are actively monitoring the machine.
+1. **Hosted judge replay:** public link with replay data, dashboard proof,
+   architecture, model-picking transitions, and no model runtime required.
+2. **Live local Mac/Ollama demo:** local models run on the developer machine and
+   the TokenTriage UI/API is exposed through a tunnel.
+3. **Full VM stack:** TokenTriage and Ollama run together on one server.
 
 ### Recommended Public Judge Link
 
@@ -367,7 +367,7 @@ This mode shows:
 - chat replay with routing trace and model-selection transition
 - dashboard analytics from the seeded decision ledger
 - architecture scenarios
-- evidence without depending on Ollama, Wi-Fi, laptop sleep, or OpenRouter quota
+- evidence without requiring live model inference
 
 On hosted platforms, make sure `TOKENTRIAGE_DB_PATH` points to persistent
 storage if the platform supports it. If not, seed replay during container start
@@ -383,9 +383,8 @@ tokentriage serve
 cloudflared tunnel --url http://localhost:8000
 ```
 
-Only tunnel `localhost:8000`. Do **not** expose Ollama on `localhost:11434`
-directly. Keep the Mac plugged in, disable sleep, and keep `OPENROUTER_API_KEY`
-blank if you want to prove a fully local run.
+Only tunnel `localhost:8000`; Ollama can remain private on `localhost:11434`.
+Keep `OPENROUTER_API_KEY` blank for a fully local run.
 
 ### Full Local-First Demo On A VM
 
