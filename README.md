@@ -110,17 +110,9 @@ Current cloud rescue tiers:
 | T6 | `qwen/qwen3-next-80b-a3b-instruct:free` | Reasoning-heavy rescue |
 | T7 | `qwen/qwen3-coder-480b-a35b:free` | Code-heavy rescue |
 
-Optional per-model key isolation:
-
-```env
-TOKENTRIAGE_OR_GEMMA_31B_KEY=
-TOKENTRIAGE_OR_GPT_OSS_20B_KEY=
-TOKENTRIAGE_OR_QWEN_NEXT_80B_KEY=
-TOKENTRIAGE_OR_QWEN_CODER_480B_KEY=
-```
-
-If a cloud tier is unavailable, rate-limited, or missing a key, TokenTriage
-falls back to available local tiers and records the routing event.
+One OpenRouter key powers the configured rescue catalog. If a cloud tier is
+unavailable, rate-limited, or missing a key, TokenTriage falls back to available
+local tiers and records the routing event.
 
 ## Architecture
 
@@ -352,7 +344,50 @@ tokentriage adk-demo "..." # run ADK triage/verifier agents locally
 
 ## Hosting
 
-### Full local-first demo on a VM
+Judging may happen at an unknown time, so do **not** rely on a MacBook staying
+awake for weeks as the only public demo. Use two modes:
+
+1. **Reliable hosted judge replay:** public 24/7 link with replay data, dashboard
+   proof, architecture, model-picking transitions, and no model runtime required.
+2. **Live local Mac/Ollama demo:** use this for the recorded video or any time
+   you are actively monitoring the machine.
+
+### Recommended Public Judge Link
+
+For the public submission link, deploy TokenTriage with deterministic replay
+enabled and persist `tokentriage.db`.
+
+```bash
+tokentriage judge-mode
+tokentriage serve --judge-mode
+```
+
+This mode shows:
+
+- chat replay with routing trace and model-selection transition
+- dashboard analytics from the seeded decision ledger
+- architecture scenarios
+- evidence without depending on Ollama, Wi-Fi, laptop sleep, or OpenRouter quota
+
+On hosted platforms, make sure `TOKENTRIAGE_DB_PATH` points to persistent
+storage if the platform supports it. If not, seed replay during container start
+or before creating the deployment image.
+
+### Live Mac/Ollama Demo
+
+For a monitored live demo from your Mac:
+
+```bash
+ollama serve
+tokentriage serve
+cloudflared tunnel --url http://localhost:8000
+```
+
+Only tunnel `localhost:8000`. Do **not** expose Ollama on `localhost:11434`
+directly. Keep the Mac plugged in, disable sleep, and keep `OPENROUTER_API_KEY`
+blank if you want to prove a fully local run.
+
+### Full Local-First Demo On A VM
 
 This is the best deployment for the project story because it hosts TokenTriage
 and Ollama together.
@@ -368,7 +403,7 @@ docker compose exec ollama ollama pull nomic-embed-text
 
 Then expose port `8000` through your VM firewall or reverse proxy.
 
-### Lightweight hosted UI/API
+### Lightweight Hosted UI/API
 
 Cloud Run, Render, Railway, or Fly can run the FastAPI container. This is good
 for `/chat`, `/dashboard`, `/architecture`, OpenRouter-enabled mode, and
@@ -382,17 +417,11 @@ docker build -t tokentriage .
 docker run --env-file .env -p 8000:8000 tokentriage
 ```
 
-### Emergency judge replay
-
-For a public demo link with no model runtime:
+For hosted replay, run the app with:
 
 ```bash
-tokentriage judge-mode
-tokentriage serve
+tokentriage serve --judge-mode
 ```
-
-Persist `tokentriage.db` with the deployment so replay history and dashboard
-proof remain available.
 
 ## Security And Privacy
 
