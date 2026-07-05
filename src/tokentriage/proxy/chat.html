@@ -1328,7 +1328,7 @@
   .model-card.is-selected .model-copy span{color:color-mix(in srgb, var(--ink) 74%, var(--accent))}
   .composer{
     display:grid;
-    grid-template-columns:minmax(0,1fr) auto auto;
+    grid-template-columns:minmax(0,1fr) auto auto auto;
     gap:10px;
     padding:10px 12px 12px;
     border-top:1px solid var(--rule);
@@ -1351,16 +1351,24 @@
     border-color:color-mix(in srgb, var(--qwen) 68%, var(--rule));
     box-shadow:0 0 0 4px color-mix(in srgb, var(--qwen) 14%, transparent);
   }
-  button.send{
+  button.send,
+  button.stop{
     width:82px;
     height:44px;
     border:0;
     border-radius:10px;
-    background:linear-gradient(135deg,var(--ink),color-mix(in srgb,var(--ink) 72%,var(--qwen)));
     color:var(--paper);
     font:900 13px/1 var(--mono);
     cursor:pointer;
   }
+  button.send{
+    background:linear-gradient(135deg,var(--ink),color-mix(in srgb,var(--ink) 72%,var(--qwen)));
+  }
+  button.stop{
+    display:none;
+    background:linear-gradient(135deg,var(--pro),color-mix(in srgb,var(--pro) 68%,var(--ink)));
+  }
+  button.stop.is-visible{display:block}
   button.mic{
     width:44px;
     height:44px;
@@ -1434,7 +1442,7 @@
     .top-actions{width:100%;justify-content:space-between}
     .link-button{flex:1}
     .composer{grid-template-columns:1fr}
-    button.send{width:100%;height:46px}
+    button.send,button.stop{width:100%;height:46px}
     .rail-track{height:176px;grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr);gap:2px}
     .orbit-stage{width:124px;transform:scale(.78)}
     .orbit-stage.is-active,
@@ -1518,6 +1526,7 @@
       <button class="mic" id="mic" type="button" title="Voice Input">
         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
       </button>
+      <button class="stop" id="stop" type="button">Stop</button>
       <button class="send" id="send" type="submit">Send</button>
     </form>
   </main>
@@ -1584,6 +1593,7 @@ if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window){
   micBtn.style.display = 'none';
 }
 const send = document.getElementById('send');
+const stopBtn = document.getElementById('stop');
 const modelTrack = document.getElementById('modelTrack');
 const railStatus = document.getElementById('railStatus');
 const inspectorBody = document.getElementById('inspectorBody');
@@ -1592,6 +1602,27 @@ const runtimeFlow = document.getElementById('runtimeFlow');
 const runtimeNote = document.getElementById('runtimeNote');
 const KEY = 'tokentriage.history';
 const JUDGE_MODE_CONFIG = '/api/config';
+let activeAbort = null;
+let isBusy = false;
+
+function setBusy(nextBusy){
+  isBusy = Boolean(nextBusy);
+  send.disabled = isBusy;
+  stopBtn.classList.toggle('is-visible', isBusy);
+  stopBtn.disabled = !isBusy;
+  input.disabled = isBusy;
+  if(isBusy && isListening && recognition) recognition.stop();
+}
+
+function stopActiveRequest(){
+  if(activeAbort) activeAbort.abort();
+}
+
+stopBtn.addEventListener('click', stopActiveRequest);
+
+function isAbortError(error){
+  return error && (error.name === 'AbortError' || error.message === 'AbortError');
+}
 
 async function initJudgeMode() {
   try {
@@ -2511,6 +2542,10 @@ function replayPayloadFromData(data){
 }
 
 async function playReplay(data){
+  if(isBusy) return;
+  activeAbort = new AbortController();
+  const signal = activeAbort.signal;
+  setBusy(true);
   const replay = replayPayloadFromData(data);
   history = [replay.user];
   convId = newConvId();
@@ -2529,30 +2564,42 @@ async function playReplay(data){
   feed.appendChild(twrap);
   feed.scrollTop = feed.scrollHeight;
 
-  for(const ev of replay.assistant.events || []){
-    played.push(ev);
-    appendTraceEvent(trace, ev);
-    updateRuntimeEvent(ev, played);
-    updateRailEvent(ev);
-    feed.scrollTop = feed.scrollHeight;
-    await sleep(ev.stage === 'DISPATCHING' || ev.stage === 'ESCALATING' ? 520 : 280);
-  }
+  try{
+    for(const ev of replay.assistant.events || []){
+      if(signal.aborted) throw new DOMException('Aborted', 'AbortError');
+      played.push(ev);
+      appendTraceEvent(trace, ev);
+      updateRuntimeEvent(ev, played);
+      updateRailEvent(ev);
+      feed.scrollTop = feed.scrollHeight;
+      await sleep(ev.stage === 'DISPATCHING' || ev.stage === 'ESCALATING' ? 520 : 280);
+    }
 
-  thinking.remove();
-  finishRouting(replay.assistant.meta, replay.assistant.ms);
-  runtimeFromEvents(played, replay.assistant.meta);
-  const bubble = div('bubble answer', renderMarkdown(replay.assistant.content));
-  applyMath(bubble);
-  twrap.insertBefore(bubble, trace);
-  twrap.classList.add('selectable');
-  twrap.addEventListener('click', () => {
-    showInspector(replay.assistant.meta, replay.assistant.ms);
+    thinking.remove();
+    finishRouting(replay.assistant.meta, replay.assistant.ms);
     runtimeFromEvents(played, replay.assistant.meta);
-  });
-  finishTrace(trace);
-  history.push({...replay.assistant, events:played});
-  localStorage.setItem(KEY, JSON.stringify(history));
-  feed.scrollTop = feed.scrollHeight;
+    const bubble = div('bubble answer', renderMarkdown(replay.assistant.content));
+    applyMath(bubble);
+    twrap.insertBefore(bubble, trace);
+    twrap.classList.add('selectable');
+    twrap.addEventListener('click', () => {
+      showInspector(replay.assistant.meta, replay.assistant.ms);
+      runtimeFromEvents(played, replay.assistant.meta);
+    });
+    finishTrace(trace);
+    history.push({...replay.assistant, events:played});
+    localStorage.setItem(KEY, JSON.stringify(history));
+  }catch(e){
+    resetRail();
+    thinking.remove();
+    twrap.insertBefore(div('bubble answer', 'Stopped.'), trace);
+    finishTrace(trace);
+    renderRuntime([], null, 'Replay stopped by user.');
+  }finally{
+    if(activeAbort?.signal === signal) activeAbort = null;
+    setBusy(false);
+    feed.scrollTop = feed.scrollHeight;
+  }
 }
 
 async function readSSE(res, onItem){
@@ -2577,6 +2624,10 @@ async function readSSE(res, onItem){
 }
 
 async function ask(text){
+  if(isBusy) return;
+  activeAbort = new AbortController();
+  const signal = activeAbort.signal;
+  setBusy(true);
   history.push({role:'user', content:text});
   save();
   setEmpty();
@@ -2600,7 +2651,8 @@ async function ask(text){
     const res = await fetch('/v1/route/stream', {
       method:'POST',
       headers:{'content-type':'application/json'},
-      body: JSON.stringify({messages: payload})
+      body: JSON.stringify({messages: payload}),
+      signal
     });
     if(!res.ok) throw new Error(`request failed: ${res.status}`);
     let data = null;
@@ -2650,21 +2702,25 @@ async function ask(text){
   }catch(e){
     resetRail();
     thinking.remove();
-    twrap.insertBefore(div('bubble answer', 'Error: ' + esc(e.message)), trace);
-    twrap.querySelector('.answer').style.borderColor = 'var(--pro)';
+    const stopped = isAbortError(e);
+    twrap.insertBefore(div('bubble answer', stopped ? 'Stopped.' : 'Error: ' + esc(e.message)), trace);
+    if(!stopped) twrap.querySelector('.answer').style.borderColor = 'var(--pro)';
     finishTrace(trace);
+    renderRuntime([], null, stopped ? 'Generation stopped by user.' : 'Request failed.');
+  }finally{
+    if(activeAbort?.signal === signal) activeAbort = null;
+    setBusy(false);
   }
   feed.scrollTop = feed.scrollHeight;
 }
 
 form.addEventListener('submit', async (e)=>{
   e.preventDefault();
+  if(isBusy) return;
   const text = input.value.trim();
   if(!text) return;
   input.value = '';
-  send.disabled = true;
   await ask(text);
-  send.disabled = false;
   input.focus();
 });
 
