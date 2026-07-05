@@ -32,12 +32,22 @@ def test_judge_mode_enabled():
     """Verify that demo replay endpoints are accessible when judge-mode is enabled."""
     
     with patch("tokentriage.proxy.app._judge_mode", True):
-        # We mock out the database query so it doesn't crash on an empty DB
-        with patch("tokentriage.proxy.app._decision_rows", return_value=[]):
-            response = client.get("/demo/replay/list")
-            assert response.status_code == 200
-            assert response.json() == {"count": 0, "items": []}
-            
-            response = client.get("/demo/replay/next")
-            assert response.status_code == 404
-            assert response.json() == {"error": "no replay items seeded"}
+        response = client.get("/demo/replay/list")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] >= 6
+        assert data["items"][0]["task_preview"].startswith("What is the capital")
+
+        response = client.get("/demo/replay/next")
+        assert response.status_code == 200
+        item = response.json()
+        assert item["index"] == 0
+        assert item["conversation"][0]["role"] == "user"
+        assert item["conversation"][1]["role"] == "assistant"
+        assert "Canberra" in item["conversation"][1]["content"]
+
+        response = client.get("/demo/replay/prev")
+        assert response.status_code == 200
+        item = response.json()
+        assert item["index"] == data["count"] - 1
+        assert item["conversation"][1]["content"].startswith("Blocked:")

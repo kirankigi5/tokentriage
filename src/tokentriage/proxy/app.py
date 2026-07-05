@@ -26,7 +26,7 @@ from tokentriage import db
 from tokentriage.agents.orchestrator import route
 from tokentriage.cache.semantic_cache import SemanticCache
 from tokentriage.config import load_policy
-from tokentriage.evidence import seed_judge_replay
+from tokentriage.evidence import JUDGE_SCENARIOS, seed_judge_replay
 from tokentriage.mcp_server import tools as mcp_tools
 from tokentriage.models.registry import TIERS
 from tokentriage.security.gateway import RateLimiter, SecurityError, gateway_check
@@ -41,7 +41,7 @@ if _IMGS_DIR.exists():
 _policy: dict = {}
 _cache: SemanticCache | None = None
 _limiter = RateLimiter()
-_demo_index = 0
+_demo_index = -1
 _judge_mode = False
 
 
@@ -69,6 +69,76 @@ def _conversation_for_task_preview(preview: str) -> list[dict] | None:
             return None
         conv_id = row["conversation_id"]
     return db.get_conversation(conv_id)
+
+
+def _model_id_for_replay(tier: str) -> str:
+    return {
+        "T0": "semantic-cache",
+        "T1": "qwen2.5:3b",
+        "T2": "qwen2.5:7b",
+        "T3": "qwen2.5:14b",
+        "T4": "google/gemma-4-31b-it:free",
+        "T5": "openai/gpt-oss-20b:free",
+        "T6": "qwen/qwen3-next-80b-a3b-instruct:free",
+        "T7": "qwen/qwen3-coder-480b-a35b:free",
+    }.get(tier, "semantic-cache")
+
+
+def _replay_meta(idx: int, row: dict) -> dict:
+    return {
+        "task_id": f"judge-{idx + 1:02d}",
+        "chosen_tier": row.get("chosen_tier", ""),
+        "model_id": _model_id_for_replay(row.get("chosen_tier", "")),
+        "task_type": row.get("task_type", "replay"),
+        "complexity": 0.1 if row.get("task_type") in ("factual_lookup", "cached") else 0.7,
+        "rationale": row.get("rationale", "judge replay route"),
+        "cost_usd": row.get("cost_usd", 0.0),
+        "baseline_cost_usd": row.get("baseline_cost_usd", 0.0),
+        "cache_hit": row.get("cache_hit", False),
+        "verified": row.get("verified", False),
+        "verdict": row.get("verdict"),
+        "escalated_to": row.get("escalated_to"),
+        "context_note": row.get("context_note"),
+        "dispatch_latency_ms": row.get("dispatch_latency_ms", 0.0),
+    }
+
+
+def _replay_item(idx: int) -> dict:
+    row = JUDGE_SCENARIOS[idx]
+    meta = _replay_meta(idx, row)
+    decision = {
+        "id": idx + 1,
+        "task_id": meta["task_id"],
+        "task_preview": row["task"][:120],
+        "task_type": row.get("task_type", "replay"),
+        "complexity": meta["complexity"],
+        "chosen_tier": row.get("chosen_tier", ""),
+        "rationale": row.get("rationale", "judge replay route"),
+        "cost_usd": row.get("cost_usd", 0.0),
+        "baseline_cost_usd": row.get("baseline_cost_usd", 0.0),
+        "cache_hit": int(bool(row.get("cache_hit", False))),
+        "verified": int(bool(row.get("verified", False))),
+        "verdict": row.get("verdict"),
+        "escalated_to": row.get("escalated_to"),
+        "dispatch_latency_ms": row.get("dispatch_latency_ms", 0.0),
+        "error": None,
+    }
+    assistant = {
+        "role": "assistant",
+        "content": row.get("answer", ""),
+        "events": row.get("events", []),
+        "meta": meta,
+        "ms": row.get("dispatch_latency_ms", 0.0) + 45,
+    }
+    return {
+        "index": idx,
+        "count": len(JUDGE_SCENARIOS),
+        "decision": decision,
+        "conversation": [
+            {"role": "user", "content": row["task"]},
+            assistant,
+        ],
+    }
 
 
 @app.on_event("startup")
@@ -315,38 +385,47 @@ def demo_replay_reset():
     _ensure_judge_mode()
     seed_judge_replay()
     global _demo_index
-    _demo_index = 0
-    return {"ok": True, "message": "judge trace seeded", "items": len(_decision_rows())}
+    _demo_index = -1
+    return {"ok": True, "message": "judge trace seeded", "items": len(JUDGE_SCENARIOS)}
 
 
 @app.get("/demo/replay/list")
 def demo_replay_list():
-    """List seeded replay decisions (id, ts, task_preview, task_type, chosen_tier)."""
+    """List deterministic replay scenarios in carousel order."""
     _ensure_judge_mode()
-    rows = _decision_rows()
-    return {"count": len(rows), "items": [{"idx": i, "id": r["id"], "ts": r["ts"], "task_preview": r["task_preview"], "task_type": r["task_type"], "chosen_tier": r["chosen_tier"]} for i, r in enumerate(rows)]}
+    return {
+        "count": len(JUDGE_SCENARIOS),
+        "index": _demo_index,
+        "items": [
+            {
+                "idx": i,
+                "id": i + 1,
+                "task_preview": row["task"][:120],
+                "task_type": row.get("task_type", "replay"),
+                "chosen_tier": row.get("chosen_tier", ""),
+                "blocked": bool(row.get("blocked", False)),
+            }
+            for i, row in enumerate(JUDGE_SCENARIOS)
+        ],
+    }
 
 
 @app.get("/demo/replay/item/{idx}")
 def demo_replay_item(idx: int):
-    """Return the decision at index `idx` and its conversation messages (if found)."""
+    """Return the prerecorded replay item at index `idx`."""
     _ensure_judge_mode()
-    rows = _decision_rows()
-    if idx < 0 or idx >= len(rows):
+    if idx < 0 or idx >= len(JUDGE_SCENARIOS):
         return JSONResponse(status_code=404, content={"error": "index out of range"})
-    r = rows[idx]
-    conv = _conversation_for_task_preview(r.get("task_preview", ""))
-    return {"index": idx, "decision": r, "conversation": conv}
+    return _replay_item(idx)
 
 
 @app.get("/demo/replay/next")
 def demo_replay_next():
     _ensure_judge_mode()
     global _demo_index
-    rows = _decision_rows()
-    if not rows:
+    if not JUDGE_SCENARIOS:
         return JSONResponse(status_code=404, content={"error": "no replay items seeded"})
-    _demo_index = min(_demo_index + 1, len(rows) - 1)
+    _demo_index = (_demo_index + 1) % len(JUDGE_SCENARIOS)
     return demo_replay_item(_demo_index)
 
 
@@ -354,10 +433,9 @@ def demo_replay_next():
 def demo_replay_prev():
     _ensure_judge_mode()
     global _demo_index
-    rows = _decision_rows()
-    if not rows:
+    if not JUDGE_SCENARIOS:
         return JSONResponse(status_code=404, content={"error": "no replay items seeded"})
-    _demo_index = max(_demo_index - 1, 0)
+    _demo_index = (_demo_index - 1) % len(JUDGE_SCENARIOS)
     return demo_replay_item(_demo_index)
 
 

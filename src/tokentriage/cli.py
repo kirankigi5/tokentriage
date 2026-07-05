@@ -24,10 +24,27 @@ from tokentriage.config import load_policy, settings
 app = typer.Typer(help="TokenTriage — Inference Cost Engine", no_args_is_help=True)
 
 
+def _configure_cloud(allow_cloud: bool, label: str) -> None:
+    if allow_cloud:
+        os.environ["TOKENTRIAGE_ENABLE_CLOUD"] = "1"
+        os.environ.pop("TOKENTRIAGE_DISABLE_CLOUD", None)
+        typer.echo(f"Cloud tiers enabled for {label}.")
+    else:
+        os.environ["TOKENTRIAGE_DISABLE_CLOUD"] = "1"
+        os.environ.pop("TOKENTRIAGE_ENABLE_CLOUD", None)
+        typer.echo(f"Cloud tiers disabled for {label}. Use --allow-cloud to opt in.")
+
+
 @app.command()
-def serve(host: str = settings.host, port: int = settings.port, judge_mode: bool = typer.Option(False, "--judge-mode", help="Seed DB with a precomputed judge trace before starting.")):
+def serve(
+    host: str = settings.host,
+    port: int = settings.port,
+    judge_mode: bool = typer.Option(False, "--judge-mode", help="Seed DB with a precomputed judge trace before starting."),
+    allow_cloud: bool = typer.Option(False, "--allow-cloud", help="Allow OpenRouter/OpenAI/Gemini tiers while serving."),
+):
     """Start the OpenAI-compatible gateway and the /dashboard."""
     import uvicorn
+    _configure_cloud(allow_cloud, "server")
     if judge_mode:
         os.environ["TOKENTRIAGE_JUDGE_MODE"] = "1"
         from tokentriage.evidence import seed_judge_replay
@@ -39,7 +56,10 @@ def serve(host: str = settings.host, port: int = settings.port, judge_mode: bool
 
 
 @app.command()
-def benchmark(queries: Path = Path("benchmarks/test_queries.jsonl")):
+def benchmark(
+    queries: Path = Path("benchmarks/test_queries.jsonl"),
+    allow_cloud: bool = typer.Option(False, "--allow-cloud", help="Allow OpenRouter/OpenAI/Gemini tiers during benchmark."),
+):
     """Route every benchmark query and compare against always-Pro pricing.
 
     This produces the demo's headline table: per-task tier choice, rationale,
@@ -48,6 +68,7 @@ def benchmark(queries: Path = Path("benchmarks/test_queries.jsonl")):
     from tokentriage.agents.orchestrator import route
     from tokentriage.cache.semantic_cache import SemanticCache
 
+    _configure_cloud(allow_cloud, "benchmark")
     db.init_db()
     policy = load_policy()
     cache = SemanticCache(policy)
@@ -111,8 +132,9 @@ def evidence(queries: Path = Path("benchmarks/test_queries.jsonl"),
              )):
     """Generate the evidence bundle: report.md, metrics.json, CSV, dashboard."""
     if not allow_cloud:
-        os.environ["TOKENTRIAGE_DISABLE_CLOUD"] = "1"
-        typer.echo("Cloud tiers disabled for evidence run. Use --allow-cloud to opt in.")
+        _configure_cloud(False, "evidence run")
+    else:
+        _configure_cloud(True, "evidence run")
     from tokentriage.evidence import run_evidence
 
     run_dir = run_evidence(queries, out, verbose=True)

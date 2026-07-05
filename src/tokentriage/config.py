@@ -22,6 +22,17 @@ except ImportError:  # dotenv is optional; plain env vars still work
     pass
 
 
+_CLOUD_PROVIDERS = {"openrouter", "openai", "gemini"}
+_TRUE_VALUES = {"1", "true", "yes", "on"}
+
+
+def cloud_enabled() -> bool:
+    """Return True only when cloud model dispatch is explicitly enabled."""
+    if os.getenv("TOKENTRIAGE_DISABLE_CLOUD", "").lower() in _TRUE_VALUES:
+        return False
+    return os.getenv("TOKENTRIAGE_ENABLE_CLOUD", "").lower() in _TRUE_VALUES
+
+
 def tier_key(tier_env: str, provider: str | None = None) -> str:
     """Resolve a tier's API key without leaking keys across providers.
 
@@ -29,8 +40,7 @@ def tier_key(tier_env: str, provider: str | None = None) -> str:
     from accidentally enabling a Gemini tier, and vice versa.
     """
     p = (provider or "").lower()
-    disable_cloud = os.getenv("TOKENTRIAGE_DISABLE_CLOUD", "").lower()
-    if p in ("openrouter", "openai", "gemini") and disable_cloud in ("1", "true", "yes", "on"):
+    if p in _CLOUD_PROVIDERS and not cloud_enabled():
         return ""
     direct = os.getenv(tier_env) if tier_env else ""
     if direct:

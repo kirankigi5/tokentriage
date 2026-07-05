@@ -86,15 +86,33 @@ The server binds to `0.0.0.0:8000` by default.
 
 ## OpenRouter Is Optional
 
-Leave this blank for **zero OpenRouter/cloud calls**:
+Cloud dispatch is disabled by default, even if an OpenRouter key exists in
+`.env`. The normal commands stay local-only:
+
+```bash
+tokentriage serve
+tokentriage benchmark
+tokentriage evidence
+```
+
+Use `--allow-cloud` only when you intentionally want OpenRouter rescue:
+
+```bash
+tokentriage serve --allow-cloud
+tokentriage benchmark --allow-cloud
+tokentriage evidence --allow-cloud
+```
+
+Leave this blank for **zero OpenRouter/cloud calls** in every mode:
 
 ```env
 OPENROUTER_API_KEY=
 ```
 
-Set `OPENROUTER_API_KEY` to enable the optional rescue catalog:
+To make cloud rescue available for `--allow-cloud` runs, set:
 
 ```env
+TOKENTRIAGE_ENABLE_CLOUD=1
 OPENROUTER_API_KEY=sk-or-v1-...
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 OPENROUTER_SITE_URL=http://localhost:8000
