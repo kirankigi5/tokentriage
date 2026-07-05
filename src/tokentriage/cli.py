@@ -30,8 +30,8 @@ def serve(host: str = settings.host, port: int = settings.port, judge_mode: bool
     import uvicorn
     if judge_mode:
         os.environ["TOKENTRIAGE_JUDGE_MODE"] = "1"
-        from tokentriage.demo.replay import seed_judge_data
-        seed_judge_data()
+        from tokentriage.evidence import seed_judge_replay
+        seed_judge_replay()
     else:
         db.init_db()
     typer.echo(f"TokenTriage gateway → http://{host}:{port}  ·  dashboard → /dashboard")

@@ -9,8 +9,8 @@ Four checks, in order:
   4. Budget precheck     — delegates to the circuit breaker (security/budget.py)
 
 Design choice: heuristics run BEFORE any model call, so hostile input never
-reaches a paid model and never costs money. A model-based second-pass screen
-is an optional upgrade (see TODO).
+reaches a paid model and never costs money. Borderline input can be routed
+through a future model-based second-pass screen without changing this contract.
 """
 from __future__ import annotations
 
@@ -76,8 +76,8 @@ def injection_screen(task: str) -> None:
         if rx.search(task):
             db.quarantine(task, f"injection_pattern:{rx.pattern}")
             raise SecurityError(400, "request_quarantined_prompt_injection")
-    # TODO(antigravity): optional second pass — classify borderline inputs
-    # with the T1 model using a strict yes/no schema, still pre-routing.
+    # Extension point: borderline inputs can be classified with a strict
+    # yes/no schema here while still staying pre-routing.
 
 
 def gateway_check(task: str, client_key: str, policy: dict, limiter: RateLimiter) -> str:

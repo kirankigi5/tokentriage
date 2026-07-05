@@ -26,10 +26,10 @@ from tokentriage import db
 from tokentriage.agents.orchestrator import route
 from tokentriage.cache.semantic_cache import SemanticCache
 from tokentriage.config import load_policy
+from tokentriage.evidence import seed_judge_replay
 from tokentriage.mcp_server import tools as mcp_tools
 from tokentriage.models.registry import TIERS
 from tokentriage.security.gateway import RateLimiter, SecurityError, gateway_check
-from tokentriage.demo.replay import seed_judge_data
 
 app = FastAPI(title="TokenTriage — Inference Cost Engine")
 
@@ -311,9 +311,9 @@ def _ensure_judge_mode():
 
 @app.post("/demo/replay/reset")
 def demo_replay_reset():
-    """Re-seed the DB from `benchmarks/judge_trace.jsonl` and reset the in-memory pointer."""
+    """Re-seed the polished deterministic judge replay and reset the in-memory pointer."""
     _ensure_judge_mode()
-    seed_judge_data()
+    seed_judge_replay()
     global _demo_index
     _demo_index = 0
     return {"ok": True, "message": "judge trace seeded", "items": len(_decision_rows())}

@@ -246,6 +246,11 @@ def seed_demo_traffic() -> dict:
 def seed_judge_replay() -> dict:
     """Seed dashboard + chat history with deterministic no-key judge data."""
     db.init_db()
+    with db.conn() as c:
+        c.execute("DELETE FROM decisions WHERE task_id LIKE 'judge-%'")
+        c.execute("DELETE FROM conversations WHERE id=?", (JUDGE_REPLAY_ID,))
+        c.execute("DELETE FROM conv_messages WHERE conversation_id=?", (JUDGE_REPLAY_ID,))
+        c.execute("DELETE FROM quarantine WHERE reason='request_quarantined_prompt_injection'")
     messages: list[dict] = []
     seeded_decisions = 0
     for i, row in enumerate(JUDGE_SCENARIOS, 1):
