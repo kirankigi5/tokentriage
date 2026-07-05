@@ -106,6 +106,22 @@ _SEED_BENCHMARKS = [
     ("T3", "creative_short", 0.97), ("T3", "summarization", 0.98),
     ("T3", "multi_step_reasoning", 0.96), ("T3", "code_generation", 0.95),
     ("T3", "legal_or_financial", 0.94),
+    ("T4", "factual_lookup", 0.99), ("T4", "classification", 0.99),
+    ("T4", "creative_short", 0.98), ("T4", "summarization", 0.99),
+    ("T4", "multi_step_reasoning", 0.98), ("T4", "code_generation", 0.97),
+    ("T4", "legal_or_financial", 0.97),
+    ("T5", "factual_lookup", 0.98), ("T5", "classification", 0.97),
+    ("T5", "creative_short", 0.96), ("T5", "summarization", 0.95),
+    ("T5", "multi_step_reasoning", 0.93), ("T5", "code_generation", 0.90),
+    ("T5", "legal_or_financial", 0.90),
+    ("T6", "factual_lookup", 0.99), ("T6", "classification", 0.98),
+    ("T6", "creative_short", 0.97), ("T6", "summarization", 0.98),
+    ("T6", "multi_step_reasoning", 0.99), ("T6", "code_generation", 0.96),
+    ("T6", "legal_or_financial", 0.95),
+    ("T7", "factual_lookup", 0.97), ("T7", "classification", 0.96),
+    ("T7", "creative_short", 0.94), ("T7", "summarization", 0.94),
+    ("T7", "multi_step_reasoning", 0.97), ("T7", "code_generation", 0.99),
+    ("T7", "legal_or_financial", 0.93),
 ]
 
 
@@ -286,8 +302,10 @@ def stats(window_hours: float = 24.0) -> dict:
             (since,)).fetchall()
         recent = c.execute(
             """SELECT ts, task_preview, task_type, chosen_tier, cost_usd,
-                      dispatch_latency_ms, verdict, escalated_to
-               FROM decisions ORDER BY id DESC LIMIT 15""").fetchall()
+                      baseline_cost_usd, cache_hit, verified, dispatch_latency_ms,
+                      verdict, escalated_to, error
+               FROM decisions WHERE ts >= ? ORDER BY id DESC LIMIT 100""",
+            (since,)).fetchall()
         
         quarantined = c.execute("SELECT COUNT(*) n FROM quarantine WHERE ts >= ?", (since,)).fetchone()["n"]
         task_types = c.execute(

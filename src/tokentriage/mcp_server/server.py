@@ -23,7 +23,7 @@ mcp = FastMCP("tokentriage")
 
 @mcp.tool()
 def get_model_pricing(tier: str) -> dict:
-    """Return USD-per-1M-token pricing for a model tier (T1/T2/T3)."""
+    """Return USD-per-1M-token pricing for a model tier (T1 through T7)."""
     return tools.get_model_pricing(tier)
 
 

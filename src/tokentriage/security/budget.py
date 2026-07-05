@@ -3,7 +3,7 @@
 Reads the spend ledger (db.budget) and enforces the policy's daily cap.
 Behavior at the cap is *graceful degradation*, not a hard outage:
 
-  - Expensive tiers (T2, T3) are disallowed once the cap is hit.
+  - Expensive tiers (T2+) are disallowed once the cap is hit.
   - T1 remains available (nearly free) so the service keeps answering.
   - If even T1 is disallowed by policy for the task type, the caller
     receives a clean 429 with a machine-readable reason.
@@ -18,7 +18,7 @@ from tokentriage import db
 from tokentriage.security.gateway import SecurityError
 
 # Tiers considered "expensive" for breaker purposes.
-_EXPENSIVE = {"T2", "T3"}
+_EXPENSIVE = {"T2", "T3", "T4", "T5", "T6", "T7"}
 
 
 def allowed_tiers(policy: dict, candidate_tiers: list[str]) -> list[str]:

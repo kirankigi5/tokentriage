@@ -22,11 +22,23 @@ except ImportError:  # dotenv is optional; plain env vars still work
     pass
 
 
-def tier_key(tier_env: str) -> str:
-    """Resolve a tier's API key: its own var first (isolation), then the shared
-    GEMINI_API_KEY / GOOGLE_API_KEY fallback so one key can power every tier."""
-    return (os.getenv(tier_env)
-            or os.getenv("GEMINI_API_KEY")
+def tier_key(tier_env: str, provider: str | None = None) -> str:
+    """Resolve a tier's API key without leaking keys across providers.
+
+    Per-tier vars still win. Provider-specific fallbacks keep an OpenRouter key
+    from accidentally enabling a Gemini tier, and vice versa.
+    """
+    direct = os.getenv(tier_env) if tier_env else ""
+    if direct:
+        return direct
+    p = (provider or "").lower()
+    if p == "openrouter":
+        return os.getenv("OPENROUTER_API_KEY") or ""
+    if p == "openai":
+        return os.getenv("OPENAI_API_KEY") or ""
+    if p == "gemini":
+        return os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
+    return (os.getenv("GEMINI_API_KEY")
             or os.getenv("GOOGLE_API_KEY")
             or "")
 

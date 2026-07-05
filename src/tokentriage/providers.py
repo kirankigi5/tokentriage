@@ -1,9 +1,10 @@
 """Provider dispatch layer — one generate() for every backend.
 
 Each model tier (see models/registry.py) names a `provider`:
-  "ollama"  -> local open-source model via the Ollama HTTP API ($0, Phase 1)
-  "gemini"  -> Google Gemini API              (Phase 2, free tier)
-  "openai"  -> OpenAI API                     (Phase 3, paid)
+  "ollama"     -> local open-source model via the Ollama HTTP API ($0, Phase 1)
+  "gemini"     -> Google Gemini API
+  "openai"     -> OpenAI API
+  "openrouter" -> OpenRouter's OpenAI-compatible API for cloud rescue tiers
 
 This module turns (tier, prompt) into (text, input_tokens, output_tokens) so
 the orchestrator, triage, and verifier stay provider-agnostic. Adding a cloud
@@ -27,6 +28,8 @@ import httpx
 _OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
 # Local models (esp. 14B) can take a while on first load; be patient.
 _OLLAMA_TIMEOUT = float(os.getenv("TOKENTRIAGE_OLLAMA_TIMEOUT", "180"))
+_OPENROUTER_BASE_URL = os.getenv(
+    "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
 
 # Some open-source models (e.g. deepseek-r1) emit <think>...</think> traces.
 # Strip them so answers and token accounting reflect the actual response.
@@ -40,6 +43,20 @@ def _approx_tokens(text: str) -> int:
 
 def _approx_msg_tokens(messages: list[dict]) -> int:
     return _approx_tokens(" ".join(m.get("content", "") for m in messages))
+
+
+def _reported_or_approx(value, fallback: int) -> int:
+    """Use backend token counts only when they are positive.
+
+    Some free/provider-routed endpoints report 0 usage. That is useful for
+    billing, but not for our baseline savings receipt, so fall back to an
+    estimate when the reported count is missing or zero.
+    """
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return fallback
+    return n if n > 0 else fallback
 
 
 def _with_retries(func):
@@ -118,8 +135,28 @@ def _openai_generate(model_id: str, api_key: str, messages: list[dict]) -> tuple
     resp = client.chat.completions.create(model=model_id, messages=messages)
     text = resp.choices[0].message.content or ""
     u = resp.usage
-    itok = getattr(u, "prompt_tokens", None) or _approx_msg_tokens(messages)
-    otok = getattr(u, "completion_tokens", None) or _approx_tokens(text)
+    itok = _reported_or_approx(getattr(u, "prompt_tokens", None), _approx_msg_tokens(messages))
+    otok = _reported_or_approx(getattr(u, "completion_tokens", None), _approx_tokens(text))
+    return text, int(itok), int(otok)
+
+
+@_with_retries
+def _openrouter_generate(model_id: str, api_key: str, messages: list[dict]) -> tuple[str, int, int]:
+    """Call OpenRouter through the OpenAI-compatible chat completions API."""
+    from openai import OpenAI
+    client = OpenAI(
+        api_key=api_key,
+        base_url=_OPENROUTER_BASE_URL,
+        default_headers={
+            "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", "http://localhost:8000"),
+            "X-Title": os.getenv("OPENROUTER_APP_NAME", "TokenTriage"),
+        },
+    )
+    resp = client.chat.completions.create(model=model_id, messages=messages)
+    text = resp.choices[0].message.content or ""
+    u = resp.usage
+    itok = _reported_or_approx(getattr(u, "prompt_tokens", None), _approx_msg_tokens(messages))
+    otok = _reported_or_approx(getattr(u, "completion_tokens", None), _approx_tokens(text))
     return text, int(itok), int(otok)
 
 
@@ -137,6 +174,8 @@ def generate(tier, prompt: str, messages: list[dict] | None = None) -> tuple[str
         return _gemini_generate(tier.model_id, tier.api_key, msgs)
     if tier.provider == "openai":
         return _openai_generate(tier.model_id, tier.api_key, msgs)
+    if tier.provider == "openrouter":
+        return _openrouter_generate(tier.model_id, tier.api_key, msgs)
     raise ValueError(f"Unknown provider for tier {tier.tier!r}: {tier.provider!r}")
 
 

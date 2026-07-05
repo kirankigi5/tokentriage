@@ -699,6 +699,38 @@
     padding:2px 0 2px 12px;
     color:color-mix(in srgb, var(--ink) 78%, var(--muted));
   }
+  .answer .table-wrap{
+    max-width:100%;
+    overflow:auto;
+    margin:10px 0 16px;
+    border:1px solid var(--rule);
+    border-radius:10px;
+    background:var(--panel);
+  }
+  .answer table{
+    width:100%;
+    min-width:520px;
+    border-collapse:collapse;
+    font-size:13px;
+    line-height:1.35;
+  }
+  .answer th,
+  .answer td{
+    vertical-align:top;
+    text-align:left;
+    border-bottom:1px solid var(--rule);
+    border-right:1px solid var(--rule);
+    padding:8px 9px;
+  }
+  .answer th:last-child,
+  .answer td:last-child{border-right:0}
+  .answer tr:last-child td{border-bottom:0}
+  .answer th{
+    background:var(--panel-2);
+    font:900 11px/1.2 var(--mono);
+    text-transform:uppercase;
+    color:var(--ink);
+  }
   .thinking{
     width:max-content;
     display:flex;
@@ -1044,13 +1076,80 @@
   .rail-track{
     position:relative;
     width:100%;
-    height:180px;
+    height:204px;
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    align-items:center;
+    justify-items:center;
+    gap:8px;
+    overflow:hidden;
+  }
+  .orbit-stage{
+    position:relative;
+    width:150px;
+    min-width:0;
+    height:178px;
+    display:grid;
+    align-content:center;
+    justify-items:center;
+    opacity:.44;
+    transform:scale(.94);
+    transition:opacity .35s ease, transform .45s cubic-bezier(.22,1,.36,1), filter .35s ease;
+    filter:saturate(.78);
+  }
+  .orbit-stage.is-active,
+  .orbit-stage.is-selected{
+    opacity:1;
+    transform:scale(1);
+    filter:saturate(1);
+  }
+  .orbit-stage.is-hidden{
+    opacity:0;
+    transform:translateX(18px) scale(.82);
+    pointer-events:none;
+  }
+  .orbit-stage-title{
+    position:absolute;
+    top:0;
+    left:50%;
+    transform:translateX(-50%);
     display:flex;
     align-items:center;
     justify-content:center;
+    gap:5px;
+    max-width:100%;
+    color:var(--muted);
+    font:900 9px/1 var(--mono);
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .orbit-stage-title i{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  .orbit-bridge{
+    width:34px;
+    height:2px;
+    border-radius:99px;
+    background:linear-gradient(90deg,var(--cache),var(--verify));
+    opacity:.2;
+    transform:scaleX(.58);
+    transform-origin:left center;
+    transition:opacity .35s ease, transform .55s ease;
+  }
+  .orbit-bridge.is-active{
+    opacity:1;
+    transform:scaleX(1);
+    box-shadow:0 0 14px color-mix(in srgb, var(--verify) 24%, transparent);
   }
   .orbit-ring{
     position:absolute;
+    top:18px;
+    left:50%;
+    transform:translateX(-50%);
     width:160px;
     height:160px;
     border-radius:50%;
@@ -1063,11 +1162,12 @@
   }
   .orbit-ring.is-complete{
     opacity:0;
-    transform:scale(.95);
+    transform:translateX(-50%) scale(.95);
     transition:opacity 1.2s ease 2s, transform 1.2s ease 2s;
   }
   .orbit-container{
     position:relative;
+    top:9px;
     width:160px;
     height:160px;
     transition:transform .3s ease;
@@ -1150,6 +1250,12 @@
     transition:transform .4s cubic-bezier(.34,1.56,.64,1), border-color .3s ease, background .3s ease, opacity .4s ease, box-shadow .3s ease;
     cursor:default;
     z-index:2;
+  }
+  .orbit-stage[data-orbit="cloud"] .model-card{
+    width:54px;
+  }
+  .orbit-stage[data-orbit="cloud"] .model-copy b{
+    max-width:42px;
   }
   /* counter-rotate so text stays upright while orbit spins */
   .model-card-inner{
@@ -1309,8 +1415,12 @@
     }
     .chat-shell{border-radius:14px}
     #feed{padding:18px;min-height:0}
-    .rail-track{height:150px}
-    .orbit-ring,.orbit-container{width:130px;height:130px}
+    .rail-track{height:190px}
+    .orbit-stage{width:136px;transform:scale(.86)}
+    .orbit-stage.is-active,
+    .orbit-stage.is-selected{transform:scale(.9)}
+    .orbit-stage.is-hidden{transform:translateX(12px) scale(.72)}
+    .orbit-bridge{width:22px}
     .model-card{width:50px;padding:4px}
     .model-logo{width:26px;height:26px}
     .model-copy b{font-size:9px}
@@ -1325,8 +1435,12 @@
     .link-button{flex:1}
     .composer{grid-template-columns:1fr}
     button.send{width:100%;height:46px}
-    .rail-track{height:130px}
-    .orbit-ring,.orbit-container{width:110px;height:110px}
+    .rail-track{height:176px;grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr);gap:2px}
+    .orbit-stage{width:124px;transform:scale(.78)}
+    .orbit-stage.is-active,
+    .orbit-stage.is-selected{transform:scale(.82)}
+    .orbit-stage.is-hidden{transform:translateX(10px) scale(.66)}
+    .orbit-bridge{width:16px}
     .model-card{width:44px;padding:3px}
     .model-logo{width:22px;height:22px;font-size:8px}
     .model-copy b{font-size:8px}
@@ -1498,8 +1612,14 @@ const MODEL_STACK = [
   {tier:'T1', name:'Qwen 2.5', detail:'3B local', logo:'Q3', img:'/imgs/logos/qwen.png', accent:'var(--cache)', token:'cache'},
   {tier:'T2', name:'Qwen 2.5', detail:'7B local', logo:'Q7', img:'/imgs/logos/qwen.png', accent:'var(--qwen)', token:''},
   {tier:'T3', name:'Qwen 2.5', detail:'14B local', logo:'Q14', img:'/imgs/logos/qwen.png', accent:'var(--pro)', token:'pro'},
+  {tier:'T4', name:'Gemma 31B', detail:'OpenRouter general', logo:'G31', img:'/imgs/logos/gemma.jpg', accent:'var(--verify)', token:'pro'},
+  {tier:'T5', name:'gpt-oss 20B', detail:'OpenRouter fast', logo:'OSS', img:'/imgs/logos/openai.webp', accent:'var(--verify)', token:'pro'},
+  {tier:'T6', name:'Qwen Next 80B', detail:'OpenRouter reasoning', logo:'Q80', img:'/imgs/logos/qwen.png', accent:'var(--qwen)', token:'pro'},
+  {tier:'T7', name:'Qwen Coder', detail:'OpenRouter coding', logo:'QC', img:'/imgs/logos/qwen.png', accent:'var(--qwen)', token:'pro'},
   {tier:'V',  name:'Verifier', detail:'Qwen 7B judge', logo:'V', img:'/imgs/logos/qwen.png', accent:'var(--verify)', token:'verify'},
 ];
+const LOCAL_STACK = MODEL_STACK.filter(m => ['T0','T1','T2','T3','V'].includes(m.tier));
+const CLOUD_STACK = MODEL_STACK.filter(m => ['T4','T5','T6','T7'].includes(m.tier));
 
 const STAGE_LABELS = {
   ROUTING: 'TokenTriage Routing',
@@ -1518,6 +1638,10 @@ const STAGE_LABELS = {
   ESCALATED_T1: 'Escalation',
   ESCALATED_T2: 'Escalation',
   ESCALATED_T3: 'Escalation',
+  ESCALATED_T4: 'OpenRouter Rescue',
+  ESCALATED_T5: 'OpenRouter Rescue',
+  ESCALATED_T6: 'OpenRouter Rescue',
+  ESCALATED_T7: 'OpenRouter Rescue',
   DONE: 'Savings Receipt',
   QUARANTINE: 'Security Gateway',
   ERROR: 'Routing Error',
@@ -1529,7 +1653,8 @@ const RUNTIME_STEPS = [
   {id:'cache', label:'Cache T0', detail:'semantic reuse', img:'/imgs/logos/nomic.png', accent:'var(--cache)'},
   {id:'triage', label:'Triage', detail:'task type + complexity', img:'/imgs/logos/qwen.png', accent:'var(--qwen)'},
   {id:'policy', label:'MCP + Policy', detail:'prices, floors, caps', icon:'MCP', accent:'var(--verify)'},
-  {id:'models', label:'Models', detail:'dispatch tier', img:'/imgs/logos/qwen.png', accent:'var(--cache)'},
+  {id:'local', label:'Local Models', detail:'Ollama Qwen tiers', img:'/imgs/logos/qwen.png', accent:'var(--cache)'},
+  {id:'cloud', label:'OpenRouter', detail:'quality rescue', img:'/imgs/logos/openrouter-icon.webp', accent:'var(--verify)'},
   {id:'verifier', label:'Verifier', detail:'sample + escalate', icon:'V', accent:'var(--verify)'},
   {id:'receipt', label:'Receipt', detail:'cost + savings proof', icon:'UI', accent:'var(--cache)'},
 ];
@@ -1541,15 +1666,19 @@ const RUNTIME_STAGE = {
   CACHE_MISS:'cache',
   TRIAGED:'triage',
   ROUTED:'policy',
-  DISPATCHING:'models',
-  DISPATCHED:'models',
+  DISPATCHING:'local',
+  DISPATCHED:'local',
   VERIFYING:'verifier',
   VERIFIED_PASS:'verifier',
   VERIFIED_FAIL:'verifier',
   ESCALATING:'verifier',
-  ESCALATED_T1:'models',
-  ESCALATED_T2:'models',
-  ESCALATED_T3:'models',
+  ESCALATED_T1:'local',
+  ESCALATED_T2:'local',
+  ESCALATED_T3:'local',
+  ESCALATED_T4:'cloud',
+  ESCALATED_T5:'cloud',
+  ESCALATED_T6:'cloud',
+  ESCALATED_T7:'cloud',
   DONE:'receipt',
   QUARANTINE:'security',
   ERROR:'security',
@@ -1558,7 +1687,15 @@ const RUNTIME_STAGE = {
 let history = [];
 let scanTimer = null;
 let scanIndex = -1;
-let railState = {mode:'idle', selected:null, verified:false, escalatedTo:null, cacheHit:false};
+let railState = {
+  mode:'idle',
+  phase:'local',
+  selected:null,
+  verified:false,
+  escalatedTo:null,
+  cacheHit:false,
+  cloudVisible:false,
+};
 
 try { history = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e){ history = []; }
 
@@ -1569,13 +1706,42 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
 
 function inlineMarkdown(text){
   return esc(text)
+    .replace(/&lt;br\s*\/?&gt;/gi, '<br>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
 }
 
+function looksLikeTableRow(line){
+  const t = String(line || '').trim();
+  return t.startsWith('|') && t.slice(1).includes('|');
+}
+
+function looksLikeTableDivider(line){
+  return /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(String(line || '').trim());
+}
+
+function splitTableRow(line){
+  return String(line || '').trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+}
+
+function renderTable(lines){
+  if(lines.length < 2) return '';
+  const header = splitTableRow(lines[0]);
+  const body = lines.slice(2).filter(looksLikeTableRow).map(splitTableRow);
+  const colCount = Math.max(header.length, ...body.map(row => row.length));
+  while(header.length < colCount) header.push('');
+  return `<div class="table-wrap"><table>
+    <thead><tr>${header.map(cell => `<th>${inlineMarkdown(cell)}</th>`).join('')}</tr></thead>
+    <tbody>${body.map(row => `<tr>${header.map((_, i) => `<td>${inlineMarkdown(row[i] || '')}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
 function renderMarkdownBlocks(text){
-  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const lines = text
+    .replace(/\r\n/g, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .split('\n');
   let html = '';
   let para = [];
 
@@ -1598,6 +1764,19 @@ function renderMarkdownBlocks(text){
       flushPara();
       const level = Math.min(4, heading[1].length);
       html += `<h${level}>${inlineMarkdown(heading[2])}</h${level}>`;
+      continue;
+    }
+
+    if(looksLikeTableRow(trimmed) && looksLikeTableDivider(lines[i + 1] || '')){
+      flushPara();
+      const tableLines = [trimmed, lines[i + 1].trim()];
+      i += 2;
+      while(i < lines.length && looksLikeTableRow(lines[i])){
+        tableLines.push(lines[i].trim());
+        i++;
+      }
+      i--;
+      html += renderTable(tableLines);
       continue;
     }
 
@@ -1625,7 +1804,7 @@ function renderMarkdownBlocks(text){
       continue;
     }
 
-    if(/^\d+\.\s+/.test(trimmed)){
+    if(/^\d+\.\s+/.test(trimmed) && !trimmed.includes('|')){
       flushPara();
       const items = [];
       while(i < lines.length && /^\d+\.\s+/.test(lines[i].trim())){
@@ -1692,6 +1871,10 @@ function modelForTier(tier){
   };
 }
 
+function tierIsCloud(tier){
+  return ['T4','T5','T6','T7'].includes(String(tier || '').toUpperCase());
+}
+
 function logoHtml(model){
   return model.img ? `<img src="${esc(model.img)}" alt="" loading="lazy">` : esc(model.logo);
 }
@@ -1721,13 +1904,25 @@ function renderRuntime(done = [], active = null, note = 'Send a task to watch th
   runtimeNote.textContent = note;
 }
 
+function isCloudEvent(ev){
+  const model = String(ev.model || ev.detail || '').toLowerCase();
+  const tier = String(ev.tier || '').toUpperCase();
+  return ['T4','T5','T6','T7'].includes(tier) || model.includes('openrouter') || model.includes(':free') || model.includes('/');
+}
+
+function runtimeNodeForEvent(ev){
+  if((ev.stage === 'DISPATCHING' || ev.stage === 'DISPATCHED') && isCloudEvent(ev)) return 'cloud';
+  if(['ESCALATED_T4','ESCALATED_T5','ESCALATED_T6','ESCALATED_T7'].includes(ev.stage)) return 'cloud';
+  return RUNTIME_STAGE[ev.stage];
+}
+
 function runtimeFromEvents(events = [], meta = null){
   const done = [];
   let active = null;
   let note = 'Replay selected response.';
   let blocked = false;
   for(const ev of events){
-    const id = RUNTIME_STAGE[ev.stage];
+    const id = runtimeNodeForEvent(ev);
     if(!id) continue;
     if(!done.includes(id)) done.push(id);
     active = id;
@@ -1739,8 +1934,11 @@ function runtimeFromEvents(events = [], meta = null){
       if(!done.includes(id)) done.push(id);
     }
     if(!meta.cache_hit){
-      for(const id of ['triage','policy','models']){
+      for(const id of ['triage','policy','local']){
         if(!done.includes(id)) done.push(id);
+      }
+      if(['T4','T5','T6','T7'].includes(meta.chosen_tier) || ['T4','T5','T6','T7'].includes(meta.escalated_to)){
+        if(!done.includes('cloud')) done.push('cloud');
       }
     }
     if(meta.verified || meta.escalated_to){
@@ -1748,7 +1946,10 @@ function runtimeFromEvents(events = [], meta = null){
     }
     if(!done.includes('receipt')) done.push('receipt');
     active = 'receipt';
-    note = meta.cache_hit ? 'Cache hit returned at T0 with no model call.' : `Selected ${meta.chosen_tier || 'tier'} and recorded savings.`;
+    note = meta.cache_hit ? 'Cache hit returned at T0 with no model call.' :
+      (['T4','T5','T6','T7'].includes(meta.escalated_to) || ['T4','T5','T6','T7'].includes(meta.chosen_tier)
+        ? 'Local quality gate escalated to OpenRouter rescue, then recorded savings.'
+        : `Selected ${meta.chosen_tier || 'tier'} and recorded savings.`);
   }
   renderRuntime(done, active, note, blocked);
 }
@@ -1767,87 +1968,94 @@ function setEmpty(){
 
 function renderRail(){
   const selected = railState.cacheHit ? 'T0' : railState.selected;
+  const selectedIsCloud = tierIsCloud(selected);
+  const activePhase = railState.mode === 'complete'
+    ? (selectedIsCloud ? 'cloud' : 'local')
+    : railState.phase;
   railStatus.textContent =
+    railState.mode === 'routing' && activePhase === 'cloud' ? 'Rescuing with OpenRouter' :
     railState.mode === 'routing' ? 'Checking local stack' :
     selected ? `${selected} selected` : 'Idle';
 
-  // Build orbit DOM structure
-  const count = MODEL_STACK.length;
-  const angleStep = 360 / count;
-  // Radius: half the orbit-container size minus card half-width
-  const radius = 55; // ~half of 160px minus half card width
-
-  let orbitRingClass = 'orbit-ring';
-  let orbitContainerClass = 'orbit-container';
-  if(railState.mode === 'routing'){
-    orbitRingClass += ' is-routing';
-    orbitContainerClass += ' is-spinning';
-  } else if(railState.mode === 'complete'){
-    orbitRingClass += ' is-complete';
-    orbitContainerClass += ' is-stopping';
-  }
-
-  // Determine current orbit rotation for counter-rotation
-  const isSpinning = railState.mode === 'routing';
-
-  const cards = MODEL_STACK.map((m, i) => {
-    const isVerifier = m.tier === 'V';
-    const isSelected = selected === m.tier || (isVerifier && railState.verified);
-    const isScanning = railState.mode === 'routing' && scanIndex === i;
-    const isMuted = railState.mode === 'complete' && !isSelected;
-    const detail = isVerifier && railState.verified
-      ? (railState.escalatedTo ? `esc → ${railState.escalatedTo}` : 'pass')
-      : m.detail;
-
-    const angle = angleStep * i - 90; // start from top
-    const rad = angle * Math.PI / 180;
-    const x = 80 + radius * Math.cos(rad) - 29; // 80 = center of 160, 29 = half card width
-    const y = 80 + radius * Math.sin(rad) - 29;
-
-    const classes = ['model-card',
-      isSelected ? 'is-selected' : '',
-      isScanning ? 'is-scanning' : '',
-      isMuted ? 'is-muted' : ''
+  const renderOrbit = (name, label, stack, visible) => {
+    const stageActive = activePhase === name;
+    const stageSelected = railState.mode === 'complete' &&
+      ((name === 'cloud') === selectedIsCloud);
+    const stageClasses = [
+      'orbit-stage',
+      visible ? '' : 'is-hidden',
+      stageActive && railState.mode === 'routing' ? 'is-active' : '',
+      stageSelected ? 'is-selected' : '',
     ].filter(Boolean).join(' ');
 
-    return `<div class="${classes}"
-      style="--accent:${m.accent};left:${x}px;top:${y}px"
-      aria-label="${esc(m.name)} ${esc(detail)}">
-        <div class="model-card-inner">
-          <div class="model-logo">${logoHtml(m)}</div>
-          <div class="model-copy">
-            <b>${esc(m.name)}</b>
-            <span>${esc(m.tier)}</span>
+    const count = stack.length;
+    const angleStep = 360 / count;
+    const radius = count <= 4 ? 50 : 55;
+    const ringClasses = ['orbit-ring',
+      railState.mode === 'routing' && stageActive ? 'is-routing' : '',
+      railState.mode === 'complete' && stageSelected ? 'is-complete' : '',
+    ].filter(Boolean).join(' ');
+    const containerClasses = ['orbit-container',
+      railState.mode === 'routing' && stageActive ? 'is-spinning' : '',
+      railState.mode === 'complete' && stageSelected ? 'is-stopping' : '',
+    ].filter(Boolean).join(' ');
+    const cards = stack.map((m, i) => {
+      const isVerifier = m.tier === 'V';
+      const isSelected = selected === m.tier || (isVerifier && railState.verified && !selectedIsCloud);
+      const isScanning = railState.mode === 'routing' && stageActive && scanIndex === i;
+      const isMuted = railState.mode === 'complete' && stageSelected && !isSelected;
+      const detail = isVerifier && railState.verified
+        ? (railState.escalatedTo ? `esc -> ${railState.escalatedTo}` : 'pass')
+        : m.detail;
+      const angle = angleStep * i - 90;
+      const rad = angle * Math.PI / 180;
+      const x = 80 + radius * Math.cos(rad) - 29;
+      const y = 80 + radius * Math.sin(rad) - 29;
+      const classes = ['model-card',
+        isSelected ? 'is-selected' : '',
+        isScanning ? 'is-scanning' : '',
+        isMuted ? 'is-muted' : ''
+      ].filter(Boolean).join(' ');
+      return `<div class="${classes}"
+        style="--accent:${m.accent};left:${x}px;top:${y}px"
+        aria-label="${esc(m.name)} ${esc(detail)}">
+          <div class="model-card-inner">
+            <div class="model-logo">${logoHtml(m)}</div>
+            <div class="model-copy">
+              <b>${esc(m.name)}</b>
+              <span>${esc(m.tier)}</span>
+            </div>
           </div>
+        </div>`;
+    }).join('');
+    let centerHtml = '<div class="orbit-center"></div>';
+    if(railState.mode === 'complete' && stageSelected && selected){
+      const wm = modelForTier(selected);
+      centerHtml = `<div class="orbit-center is-visible">
+        <div class="orbit-center-logo" style="background:linear-gradient(135deg,${wm.accent},color-mix(in srgb, ${wm.accent} 62%, black))">
+          ${logoHtml(wm)}
         </div>
+        <div class="orbit-center-label">${esc(wm.name)}</div>
+        <div class="orbit-center-sub">${esc(selected)} selected</div>
       </div>`;
-  }).join('');
-
-  // Center winner display
-  let centerHtml = '';
-  if(railState.mode === 'complete' && selected){
-    const wm = modelForTier(selected);
-    centerHtml = `<div class="orbit-center is-visible">
-      <div class="orbit-center-logo" style="background:linear-gradient(135deg,${wm.accent},color-mix(in srgb, ${wm.accent} 62%, black))">
-        ${logoHtml(wm)}
-      </div>
-      <div class="orbit-center-label">${esc(wm.name)}</div>
-      <div class="orbit-center-sub">${esc(selected)} selected</div>
+    }
+    return `<div class="${stageClasses}" data-orbit="${esc(name)}" style="--accent:${name === 'cloud' ? 'var(--verify)' : 'var(--cache)'}">
+      <div class="orbit-stage-title"><i></i><span>${esc(label)}</span></div>
+      <div class="${ringClasses}"></div>
+      ${centerHtml}
+      <div class="${containerClasses}" id="orbitContainer-${esc(name)}">${cards}</div>
     </div>`;
-  } else {
-    centerHtml = '<div class="orbit-center"></div>';
-  }
+  };
 
+  stopCounterRotation();
   modelTrack.innerHTML = `
-    <div class="${orbitRingClass}"></div>
-    ${centerHtml}
-    <div class="${orbitContainerClass}" id="orbitContainer">
-      ${cards}
-    </div>
+    ${renderOrbit('local', 'Local stack', LOCAL_STACK, true)}
+    <div class="orbit-bridge ${railState.cloudVisible ? 'is-active' : ''}" aria-hidden="true"></div>
+    ${renderOrbit('cloud', 'OpenRouter rescue', CLOUD_STACK, railState.cloudVisible)}
   `;
 
   // Counter-rotate card inner content to keep text upright during spin
-  if(isSpinning){
+  if(railState.mode === 'routing'){
     startCounterRotation();
   } else {
     stopCounterRotation();
@@ -1860,17 +2068,18 @@ function startCounterRotation(){
   if(counterRotRAF) return;
   orbitStartTime = performance.now();
   function tick(){
-    const container = document.getElementById('orbitContainer');
-    if(!container){
+    const containers = document.querySelectorAll('.orbit-container.is-spinning');
+    if(!containers.length){
       counterRotRAF = null;
       return;
     }
     // orbit-spin is 3s per revolution
     const elapsed = (performance.now() - orbitStartTime) / 1000;
     const angle = (elapsed / 3) * 360;
-    const inners = container.querySelectorAll('.model-card-inner');
-    inners.forEach(el => {
-      el.style.transform = `rotate(${-angle}deg)`;
+    containers.forEach(container => {
+      container.querySelectorAll('.model-card-inner').forEach(el => {
+        el.style.transform = `rotate(${-angle}deg)`;
+      });
     });
     counterRotRAF = requestAnimationFrame(tick);
   }
@@ -1887,7 +2096,7 @@ function stopCounterRotation(){
 }
 
 function beginRouting(){
-  railState = {mode:'routing', selected:null, verified:false, escalatedTo:null, cacheHit:false};
+  railState = {mode:'routing', phase:'local', selected:null, verified:false, escalatedTo:null, cacheHit:false, cloudVisible:false};
   renderRuntime(['gateway'], 'gateway', 'Request entered TokenTriage.');
   scanIndex = -1;
   if(scanTimer) clearInterval(scanTimer);
@@ -1895,9 +2104,10 @@ function beginRouting(){
   const rail = document.getElementById('modelRail');
   rail.classList.add('is-open');
   scanTimer = setInterval(() => {
-    scanIndex = (scanIndex + 1) % MODEL_STACK.length;
+    const activeStack = railState.phase === 'cloud' ? CLOUD_STACK : LOCAL_STACK;
+    scanIndex = (scanIndex + 1) % activeStack.length;
     // Only update card classes, not full re-render (to keep spin smooth)
-    const container = document.getElementById('orbitContainer');
+    const container = document.getElementById(`orbitContainer-${railState.phase}`);
     if(container){
       const cards = container.querySelectorAll('.model-card');
       cards.forEach((card, i) => {
@@ -1908,13 +2118,33 @@ function beginRouting(){
   renderRail();
 }
 
+function updateRailEvent(ev){
+  if(!ev || railState.mode !== 'routing') return;
+  if(ev.stage === 'VERIFYING' || ev.stage === 'VERIFIED_FAIL'){
+    railState.verified = true;
+  }
+  if(isCloudEvent(ev) || ['ESCALATED_T4','ESCALATED_T5','ESCALATED_T6','ESCALATED_T7'].includes(ev.stage)){
+    railState.phase = 'cloud';
+    railState.cloudVisible = true;
+    if(ev.tier) railState.escalatedTo = ev.tier;
+    scanIndex = -1;
+    renderRail();
+    return;
+  }
+  if(ev.stage === 'DISPATCHING' || ev.stage === 'DISPATCHED'){
+    railState.phase = 'local';
+  }
+}
+
 function flyToReceipt(meta, callback){
   const selected = meta?.cache_hit ? 'T0' : (meta?.chosen_tier || null);
   if(!selected){ if(callback) callback(); return; }
   const wm = modelForTier(selected);
 
-  // Find the orbit center and the receipt logo
-  const centerEl = document.querySelector('.orbit-center');
+  // Find the selected orbit center and the receipt logo.
+  const orbitName = tierIsCloud(selected) ? 'cloud' : 'local';
+  const centerEl = document.querySelector(`.orbit-stage[data-orbit="${orbitName}"] .orbit-center.is-visible`)
+    || document.querySelector('.orbit-center.is-visible');
   const targetEl = document.querySelector('.inspector-token');
   if(!centerEl || !targetEl){ if(callback) callback(); return; }
 
@@ -1967,10 +2197,12 @@ function finishRouting(meta, ms){
   stopCounterRotation();
   railState = {
     mode:'complete',
+    phase: tierIsCloud(meta?.chosen_tier) ? 'cloud' : 'local',
     selected: meta?.chosen_tier || null,
     verified: Boolean(meta?.verified),
     escalatedTo: meta?.escalated_to || null,
     cacheHit: Boolean(meta?.cache_hit),
+    cloudVisible: tierIsCloud(meta?.chosen_tier) || tierIsCloud(meta?.escalated_to),
   };
   renderRail();
   runtimeFromEvents([], meta);
@@ -1993,7 +2225,7 @@ function resetRail(){
   scanTimer = null;
   scanIndex = -1;
   stopCounterRotation();
-  railState = {mode:'idle', selected:null, verified:false, escalatedTo:null, cacheHit:false};
+  railState = {mode:'idle', phase:'local', selected:null, verified:false, escalatedTo:null, cacheHit:false, cloudVisible:false};
   renderRail();
   resetRuntime();
   // Keep rail collapsed when idle
@@ -2083,6 +2315,7 @@ function showInspector(m, ms, hidden = false){
     <div class="inspector-save">${saved.toFixed(1)}% saved</div>
     <div class="inspector-kv">
       <div class="inspector-row"><span>Type</span><b>${esc(m.task_type)}</b></div>
+      ${m.provider ? `<div class="inspector-row"><span>Provider</span><b>${esc(m.provider)}</b></div>` : ''}
       <div class="inspector-row"><span>Cost</span><b>${usd(m.cost_usd)}</b></div>
       <div class="inspector-row"><span>Cloud base</span><b>${usd(m.baseline_cost_usd)}</b></div>
       <div class="inspector-row"><span>Cache</span><b>${esc(cache)}</b></div>
@@ -2219,6 +2452,7 @@ async function ask(text){
       events.push(item);
       appendTraceEvent(trace, item);
       updateRuntimeEvent(item, events);
+      updateRailEvent(item);
       if(item.stage === 'QUARANTINE' || item.stage === 'ERROR') blocked = item;
       feed.scrollTop = feed.scrollHeight;
     });

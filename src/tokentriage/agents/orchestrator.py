@@ -27,8 +27,9 @@ from tokentriage.agents.verifier import should_sample, verify
 from tokentriage.cache.semantic_cache import SemanticCache
 from tokentriage.mcp_server import tools as mcp_tools
 from tokentriage.models.registry import (
-    TIERS, TIER_ORDER, estimate_baseline_usd, estimate_cost_usd, next_tier_up)
+    TIERS, TIER_ORDER, estimate_baseline_usd, estimate_cost_usd)
 from tokentriage.security import budget as breaker
+from tokentriage.security.gateway import SecurityError
 
 
 @dataclass
@@ -89,7 +90,12 @@ except ImportError:
 
 def _candidate_tiers(policy: dict, verdict: TriageVerdict) -> list[str]:
     """Apply per-task-type min/max tier overrides to the ordered tier list."""
-    paid = [t for t in TIER_ORDER if t != "T0"]
+    # First-pass routing is local-first by design. Cloud/OpenRouter tiers are
+    # quality rescue targets, entered only after verifier failure.
+    paid = [
+        t for t in TIER_ORDER
+        if t != "T0" and TIERS[t].provider not in ("gemini", "openai", "openrouter")
+    ]
     ov = policy.get("task_overrides", {}).get(verdict.task_type, {})
     lo = ov.get("min_tier")
     hi = ov.get("max_tier")
@@ -100,16 +106,78 @@ def _candidate_tiers(policy: dict, verdict: TriageVerdict) -> list[str]:
     valid_paid = []
     for t in paid:
         tier_obj = TIERS[t]
-        if tier_obj.provider in ("gemini", "openai") and not tier_obj.api_key:
+        if tier_obj.provider in ("gemini", "openai", "openrouter") and not tier_obj.api_key:
             continue
         valid_paid.append(t)
     return valid_paid
+
+
+def _available_tier(tier: str) -> bool:
+    tier_obj = TIERS[tier]
+    return not (tier_obj.provider in ("gemini", "openai", "openrouter") and not tier_obj.api_key)
+
+
+def _preferred_cloud_tier(task_type: str) -> str | None:
+    """Pick the OpenRouter rescue model that best matches the failed task."""
+    order = _preferred_cloud_order(task_type)
+    return order[0] if order else None
+
+
+def _preferred_cloud_order(task_type: str) -> list[str]:
+    """Rank OpenRouter rescue models by task type.
+
+    The first model can be rate-limited upstream, so failover should move to
+    the next sensible model rather than simply the next tier number.
+    """
+    return {
+        "code_generation": "T7",          # qwen/qwen3-coder-480b-a35b:free
+        "multi_step_reasoning": "T6",     # qwen/qwen3-next-80b-a3b-instruct:free
+        "summarization": "T4,T6,T5",      # Gemma, then stronger reasoning, then fast fallback
+        "legal_or_financial": "T4,T6,T7,T5",
+        "creative_short": "T5",           # openai/gpt-oss-20b:free
+        "classification": "T5",
+        "factual_lookup": "T5",
+    }.get(task_type, "").split(",") if task_type else []
+
+
+def _next_escalation_tier(current: str, policy: dict, task_type: str = "") -> str | None:
+    """Quality rescue prefers the first available cloud tier after local failure.
+
+    If OpenRouter is configured, a failed local answer jumps there instead of
+    burning time through every larger local model. Without a key, the no-key
+    local ladder still works.
+    """
+    later = TIER_ORDER[TIER_ORDER.index(current) + 1:]
+    later = [t for t in later if t != "T0" and _available_tier(t)]
+    try:
+        later = breaker.allowed_tiers(policy, later) if later else []
+    except SecurityError:
+        return None
+    cloud = [t for t in later if TIERS[t].provider in ("gemini", "openai", "openrouter")]
+    for preferred in _preferred_cloud_order(task_type):
+        if preferred in cloud:
+            return preferred
+    return (cloud[0] if cloud else later[0]) if later else None
 
 
 def _pick_tier(policy: dict, verdict: TriageVerdict) -> tuple[str, str]:
     """Core decision: cheapest candidate clearing the accuracy floor."""
     floor = float(policy.get("default", {}).get("accuracy_floor", 0.90))
     slo = float(policy.get("default", {}).get("latency_slo_ms", 4000))
+    override = policy.get("task_overrides", {}).get(verdict.task_type, {})
+    if override.get("prefer_cloud"):
+        preferred = _preferred_cloud_tier(verdict.task_type)
+        if preferred and _available_tier(preferred):
+            try:
+                allowed = breaker.allowed_tiers(policy, [preferred])
+            except SecurityError:
+                allowed = []
+            if preferred in allowed:
+                return preferred, (
+                    f"policy prefers OpenRouter rescue tier {preferred} "
+                    f"for {verdict.task_type}; local fallback remains available"
+                )
+
     candidates = _candidate_tiers(policy, verdict)
     candidates = breaker.allowed_tiers(policy, candidates)  # budget circuit breaker
     
@@ -200,6 +268,47 @@ def _timed_dispatch(tier: str, task: str,
     return answer, itok, otok, latency_ms, error_msg
 
 
+def _dispatch_with_failover(tier: str, task: str, messages: list[dict] | None,
+                            policy: dict, verdict: TriageVerdict, emit) -> tuple[str, int, int, float, str | None, str, str | None]:
+    """Dispatch, failing over to later rescue tiers on provider errors.
+
+    Returns answer/tokens/latency/error/final_tier/context_note. A provider
+    error is never treated as an answered response.
+    """
+    current = tier
+    total_latency = 0.0
+    last_error = None
+    context_note = None
+    tried = set()
+
+    while current and current not in tried:
+        tried.add(current)
+        send_msgs, cnote = _privacy_context(TIERS[current], task, messages, policy)
+        emit("DISPATCHING", tier=current, model=TIERS[current].model_id,
+             detail=f"generating on {TIERS[current].model_id}")
+        answer, itok, otok, latency_ms, err = _timed_dispatch(current, task, send_msgs)
+        total_latency += latency_ms
+        if cnote:
+            context_note = cnote
+            emit("CONTEXT", detail=cnote)
+        if not err:
+            emit("DISPATCHED", cost=estimate_cost_usd(current, itok, otok),
+                 tokens=itok + otok, latency_ms=round(latency_ms, 1),
+                 detail=f"answered by {TIERS[current].model_id}")
+            return answer, itok, otok, total_latency, None, current, context_note
+
+        last_error = err
+        emit("ERROR", detail=f"{TIERS[current].model_id} failed: {err}")
+        up = _next_escalation_tier(current, policy, verdict.task_type)
+        if up is None or up in tried:
+            break
+        emit("ESCALATING", tier=up, model=TIERS[up].model_id,
+             detail=f"{TIERS[current].model_id} failed — retrying on {TIERS[up].model_id}")
+        current = up
+
+    return "", 0, 0, total_latency, last_error, current or tier, context_note
+
+
 def route(task: str, policy: dict, cache: SemanticCache,
           messages: list[dict] | None = None, on_event=None) -> RouteResult:
     """Full state machine for one request. Task is ALREADY gateway-sanitized.
@@ -243,20 +352,14 @@ def route(task: str, policy: dict, cache: SemanticCache,
     emit("ROUTED", tier=tier, model=TIERS[tier].model_id, detail=why)
 
     # --- Dispatch (privacy policy governs cloud context) ------------------
-    send_msgs, cnote = _privacy_context(TIERS[tier], task, messages, policy)
-    emit("DISPATCHING", tier=tier, model=TIERS[tier].model_id,
-         detail=f"generating on {TIERS[tier].model_id}")
-    answer, itok, otok, latency_ms, err = _timed_dispatch(tier, task, send_msgs)
+    answer, itok, otok, latency_ms, err, final_tier, cnote = _dispatch_with_failover(
+        tier, task, messages, policy, verdict, emit)
+    if final_tier != tier:
+        emit(f"ESCALATED_{final_tier}", tier=final_tier, latency_ms=round(latency_ms, 1))
+    tier = final_tier
     cost = estimate_cost_usd(tier, itok, otok)
     breaker.record(tier, cost)
     baseline = estimate_baseline_usd(itok, otok)  # what all-cloud-frontier would cost
-    if cnote:
-        emit("CONTEXT", detail=cnote)
-    if err:
-        emit("ERROR", detail=f"{TIERS[tier].model_id} failed: {err}")
-    emit("DISPATCHED", cost=cost, tokens=itok + otok,
-         latency_ms=round(latency_ms, 1),
-         detail=f"answered by {TIERS[tier].model_id}")
 
     result = RouteResult(task_id, answer, tier, verdict.task_type,
                          verdict.complexity_score,
@@ -276,7 +379,7 @@ def route(task: str, policy: dict, cache: SemanticCache,
         emit(f"VERIFIED_{vr.verdict.upper()}", detail=vr.reason)
         if vr.verdict == "pass":
             break
-        up = next_tier_up(result.chosen_tier)
+        up = _next_escalation_tier(result.chosen_tier, policy, verdict.task_type)
         if up is None:
             break
         # Escalate: re-answer one tier up; costs accumulate honestly.

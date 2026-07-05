@@ -261,6 +261,9 @@
   .section-grid.two{
     grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   }
+  .section-grid.four{
+    grid-template-columns:repeat(4,minmax(0,1fr));
+  }
   .panel{
     min-width:0;
     border:1px solid var(--rule);
@@ -292,6 +295,58 @@
     margin:8px 0 0;
     color:var(--muted);
     font-size:12px;
+  }
+  .analytics-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+  }
+  .metric-card{
+    min-width:0;
+    display:grid;
+    gap:10px;
+    border:1px solid var(--rule);
+    border-radius:10px;
+    background:var(--panel);
+    padding:12px;
+  }
+  .metric-card span{
+    color:var(--muted);
+    font:900 10px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .metric-card b{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font:900 20px/1 var(--mono);
+    font-variant-numeric:tabular-nums;
+  }
+  .metric-card p{
+    margin:0;
+    color:var(--muted);
+    font-size:12px;
+  }
+  .split-list{
+    display:grid;
+    gap:8px;
+    padding:12px;
+  }
+  .split-row{
+    display:grid;
+    grid-template-columns:112px minmax(0,1fr) 54px;
+    align-items:center;
+    gap:10px;
+    font:900 11px/1 var(--mono);
+  }
+  .split-row span{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .split-row span:last-child{
+    color:var(--muted);
+    text-align:right;
   }
   .burn{
     display:grid;
@@ -414,15 +469,34 @@
     font:800 11px/1 var(--mono);
   }
   .table-tools{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
+    display:grid;
     gap:10px;
     padding:12px;
     border-bottom:1px solid var(--rule);
   }
+  .table-headline{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .table-headline b{
+    font:900 13px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .table-headline span{
+    color:var(--muted);
+    font:900 10px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .control-grid{
+    display:grid;
+    grid-template-columns:minmax(220px,1.25fr) repeat(5,minmax(120px,.72fr)) auto;
+    gap:8px;
+    align-items:center;
+  }
   .filter{
-    width:min(420px,100%);
+    width:100%;
     height:36px;
     border:1px solid var(--rule);
     border-radius:8px;
@@ -431,6 +505,28 @@
     padding:0 10px;
     outline:0;
   }
+  .control{
+    min-width:0;
+    height:36px;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:var(--paper);
+    color:var(--ink);
+    padding:0 9px;
+    outline:0;
+    font:800 12px/1 var(--mono);
+  }
+  .export-button{
+    height:36px;
+    border:1px solid var(--ink);
+    border-radius:8px;
+    background:var(--ink);
+    color:var(--paper);
+    padding:0 12px;
+    font:900 12px/1 var(--mono);
+    cursor:pointer;
+  }
+  .export-button:hover{filter:brightness(.95)}
   .table-wrap{
     overflow:auto;
   }
@@ -493,6 +589,8 @@
   .pill.pass{color:var(--cache);border-color:color-mix(in srgb,var(--cache) 38%,var(--rule))}
   .pill.fail{color:var(--pro);border-color:color-mix(in srgb,var(--pro) 38%,var(--rule))}
   .pill.warn{color:var(--verify);border-color:color-mix(in srgb,var(--verify) 38%,var(--rule))}
+  .pill.cloud{color:var(--qwen);border-color:color-mix(in srgb,var(--qwen) 38%,var(--rule))}
+  .pill.cache{color:var(--cache);border-color:color-mix(in srgb,var(--cache) 38%,var(--rule))}
   .empty{
     padding:22px;
     color:var(--muted);
@@ -501,8 +599,11 @@
   @media (max-width:1180px){
     .kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
     .section-grid,
-    .section-grid.two{grid-template-columns:1fr}
+    .section-grid.two,
+    .section-grid.four,
+    .analytics-grid{grid-template-columns:1fr 1fr}
     .card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .control-grid{grid-template-columns:1fr 1fr}
   }
   @media (max-width:860px){
     body{overflow:auto}
@@ -527,7 +628,7 @@
     .topbar{align-items:flex-start;flex-direction:column}
     .toolbar,.table-tools{width:100%;align-items:stretch;flex-direction:column}
     .select-wrap,.refresh-button,.filter{width:100%}
-    .kpi-grid,.card-grid{grid-template-columns:1fr}
+    .kpi-grid,.card-grid,.analytics-grid,.section-grid.four,.control-grid{grid-template-columns:1fr}
     .sidebar-nav,.dashboard-nav{grid-template-columns:1fr}
   }
   @media (prefers-reduced-motion:reduce){
@@ -557,6 +658,7 @@
     <nav class="dashboard-nav" aria-label="Dashboard sections">
       <div class="side-title">Sections</div>
       <button class="tab-button is-active" type="button" data-view="overview">Overview</button>
+      <button class="tab-button" type="button" data-view="analytics">Analytics</button>
       <button class="tab-button" type="button" data-view="models">Models</button>
       <button class="tab-button" type="button" data-view="tasks">Tasks</button>
       <button class="tab-button" type="button" data-view="decisions">Decisions</button>
@@ -635,6 +737,53 @@
         </div>
       </div>
 
+      <div class="view" id="view-analytics" hidden>
+        <div class="analytics-grid">
+          <section class="metric-card">
+            <span>Local Share</span>
+            <b id="localShare">0.0%</b>
+            <p>Requests completed by cache or local Ollama tiers.</p>
+          </section>
+          <section class="metric-card">
+            <span>OpenRouter Share</span>
+            <b id="cloudShare">0.0%</b>
+            <p>Cloud rescue or policy-preferred calls.</p>
+          </section>
+          <section class="metric-card">
+            <span>Avg Cost</span>
+            <b id="avgCost">$0.000000</b>
+            <p>Mean spend per routed decision.</p>
+          </section>
+          <section class="metric-card">
+            <span>Top Task</span>
+            <b id="topTask">none</b>
+            <p id="topTaskCopy">No routed tasks in this window.</p>
+          </section>
+        </div>
+
+        <div class="section-grid two" style="margin-top:12px">
+          <section class="panel">
+            <div class="section-head"><b>Provider Split</b><span>local vs cloud</span></div>
+            <div class="split-list" id="providerSplit"></div>
+          </section>
+          <section class="panel">
+            <div class="section-head"><b>Quality Split</b><span>verifier</span></div>
+            <div class="split-list" id="qualitySplit"></div>
+          </section>
+        </div>
+
+        <div class="section-grid two" style="margin-top:12px">
+          <section class="panel">
+            <div class="section-head"><b>Latency Bands</b><span>dispatch</span></div>
+            <div class="split-list" id="latencyBands"></div>
+          </section>
+          <section class="panel">
+            <div class="section-head"><b>Savings Bands</b><span>baseline delta</span></div>
+            <div class="split-list" id="savingsBands"></div>
+          </section>
+        </div>
+      </div>
+
       <div class="view" id="view-models" hidden>
         <section class="panel">
           <div class="section-head">
@@ -658,11 +807,39 @@
       <div class="view" id="view-decisions" hidden>
         <section class="panel">
           <div class="table-tools">
-            <div class="section-head" style="border:0;padding:0;min-height:auto">
+            <div class="table-headline">
               <b>Decision Feed</b>
               <span id="decisionTotal">most recent first</span>
             </div>
-            <input class="filter" id="filter" placeholder="Filter tasks, types, tiers">
+            <div class="control-grid">
+              <input class="filter" id="filter" placeholder="Search task, type, tier, model">
+              <select class="control" id="typeFilter"><option value="all">All types</option></select>
+              <select class="control" id="tierFilter"><option value="all">All tiers</option></select>
+              <select class="control" id="providerFilter">
+                <option value="all">All providers</option>
+                <option value="cache">Cache</option>
+                <option value="local">Local</option>
+                <option value="openrouter">OpenRouter</option>
+              </select>
+              <select class="control" id="verifyFilter">
+                <option value="all">All verify</option>
+                <option value="pass">Pass</option>
+                <option value="fail">Fail</option>
+                <option value="sampled">Sampled</option>
+                <option value="not_sampled">Not sampled</option>
+                <option value="escalated">Escalated</option>
+                <option value="error">Error</option>
+              </select>
+              <select class="control" id="sortFilter">
+                <option value="time_desc">Newest first</option>
+                <option value="time_asc">Oldest first</option>
+                <option value="latency_desc">Slowest first</option>
+                <option value="cost_desc">Highest cost</option>
+                <option value="savings_desc">Best savings</option>
+                <option value="tier_asc">Tier A-Z</option>
+              </select>
+              <button class="export-button" type="button" id="exportCsv">Export</button>
+            </div>
           </div>
           <div class="table-wrap">
             <table>
@@ -670,14 +847,16 @@
                 <tr>
                   <th>Task</th>
                   <th>Type</th>
+                  <th>Provider</th>
                   <th>Model</th>
                   <th>Cost</th>
+                  <th>Savings</th>
                   <th>Latency</th>
                   <th>Verify</th>
                 </tr>
               </thead>
               <tbody id="feed">
-                <tr><td colspan="6"><div class="empty">Waiting for routing decisions.</div></td></tr>
+                <tr><td colspan="8"><div class="empty">Waiting for routing decisions.</div></td></tr>
               </tbody>
             </table>
           </div>
@@ -694,9 +873,20 @@ const MODEL_STACK = [
   {tier:'T1', name:'Qwen 2.5', detail:'3B local', logo:'Q3', img:'/imgs/logos/qwen.png', accent:'var(--cache)'},
   {tier:'T2', name:'Qwen 2.5', detail:'7B local', logo:'Q7', img:'/imgs/logos/qwen.png', accent:'var(--qwen)'},
   {tier:'T3', name:'Qwen 2.5', detail:'14B local', logo:'Q14', img:'/imgs/logos/qwen.png', accent:'var(--pro)'},
+  {tier:'T4', name:'Gemma 31B', detail:'OpenRouter general', logo:'G31', img:'/imgs/logos/gemma.jpg', accent:'var(--verify)'},
+  {tier:'T5', name:'gpt-oss 20B', detail:'OpenRouter fast', logo:'OSS', img:'/imgs/logos/openai.webp', accent:'var(--verify)'},
+  {tier:'T6', name:'Qwen Next 80B', detail:'OpenRouter reasoning', logo:'Q80', img:'/imgs/logos/qwen.png', accent:'var(--qwen)'},
+  {tier:'T7', name:'Qwen Coder', detail:'OpenRouter coding', logo:'QC', img:'/imgs/logos/qwen.png', accent:'var(--qwen)'},
 ];
 let lastData = null;
-let filterText = '';
+let filters = {
+  q: '',
+  type: 'all',
+  tier: 'all',
+  provider: 'all',
+  verify: 'all',
+  sort: 'time_desc',
+};
 
 const el = id => document.getElementById(id);
 const usd = (v, digits = 4) => '$' + Number(v || 0).toFixed(digits);
@@ -717,8 +907,48 @@ function modelForTier(tier){
   };
 }
 
+function providerForTier(tier){
+  if(tier === 'T0') return 'cache';
+  if(['T4','T5','T6','T7'].includes(String(tier || ''))) return 'openrouter';
+  return 'local';
+}
+
+function providerLabel(provider){
+  return provider === 'openrouter' ? 'OpenRouter' : provider === 'cache' ? 'Cache' : 'Local';
+}
+
+function rowSavings(row){
+  const base = Number(row.baseline_cost_usd || 0);
+  const cost = Number(row.cost_usd || 0);
+  return base > 0 ? 100 * (1 - cost / base) : 0;
+}
+
+function verifyState(row){
+  if(row.error) return 'error';
+  if(row.escalated_to) return 'escalated';
+  if(row.verdict === 'pass') return 'pass';
+  if(row.verdict === 'fail') return 'fail';
+  if(Number(row.verified || 0) > 0) return 'sampled';
+  return 'not_sampled';
+}
+
 function logoHtml(model){
   return model.img ? `<img src="${esc(model.img)}" alt="" loading="lazy">` : esc(model.logo);
+}
+
+function renderSplit(id, rows, total){
+  const max = Math.max(1, ...rows.map(r => Number(r.value || 0)));
+  const denom = Math.max(1, Number(total || rows.reduce((sum, r) => sum + Number(r.value || 0), 0)));
+  el(id).innerHTML = rows.map(r => {
+    const value = Number(r.value || 0);
+    const pct = 100 * value / denom;
+    const width = 100 * value / max;
+    return `<div class="split-row">
+      <span>${esc(r.label)}</span>
+      <div class="bar"><div class="bar-fill" style="width:${width.toFixed(1)}%"></div></div>
+      <span>${pct.toFixed(1)}%</span>
+    </div>`;
+  }).join('') || '<div class="empty">No data yet.</div>';
 }
 
 function setView(name){
@@ -766,6 +996,70 @@ function renderOverview(data){
   el('escRate').textContent = reqs ? `${(100 * escalations / reqs).toFixed(1)}%` : '0.0%';
 }
 
+function renderAnalytics(data){
+  const rows = data.recent || [];
+  const reqs = Math.max(1, Number(data.requests || 0));
+  const providerCounts = {cache:0, local:0, openrouter:0};
+  const qualityCounts = {pass:0, fail:0, sampled:0, not_sampled:0, escalated:0, error:0};
+  const latencyBands = {fast:0, normal:0, slow:0, timeout:0};
+  const savingsBands = {free:0, high:0, medium:0, low:0};
+
+  Object.entries(data.tier_utilization || {}).forEach(([tier, count]) => {
+    providerCounts[providerForTier(tier)] += Number(count || 0);
+  });
+
+  rows.forEach(row => {
+    qualityCounts[verifyState(row)] += 1;
+    const latency = Number(row.dispatch_latency_ms || 0);
+    if(latency <= 1000) latencyBands.fast += 1;
+    else if(latency <= 4000) latencyBands.normal += 1;
+    else if(latency <= 15000) latencyBands.slow += 1;
+    else latencyBands.timeout += 1;
+
+    const savings = rowSavings(row);
+    if(Number(row.cost_usd || 0) === 0) savingsBands.free += 1;
+    else if(savings >= 95) savingsBands.high += 1;
+    else if(savings >= 50) savingsBands.medium += 1;
+    else savingsBands.low += 1;
+  });
+
+  const localDone = providerCounts.cache + providerCounts.local;
+  el('localShare').textContent = `${(100 * localDone / reqs).toFixed(1)}%`;
+  el('cloudShare').textContent = `${(100 * providerCounts.openrouter / reqs).toFixed(1)}%`;
+  el('avgCost').textContent = usd(Number(data.cost_usd || 0) / reqs, 6);
+
+  const taskEntries = Object.entries(data.task_types || {}).sort((a,b) => Number(b[1]) - Number(a[1]));
+  const [topType, topCount] = taskEntries[0] || ['none', 0];
+  el('topTask').textContent = String(topType).replace(/_/g, ' ');
+  el('topTaskCopy').textContent = topCount ? `${topCount} decisions in this window.` : 'No routed tasks in this window.';
+
+  renderSplit('providerSplit', [
+    {label:'Cache', value:providerCounts.cache},
+    {label:'Local', value:providerCounts.local},
+    {label:'OpenRouter', value:providerCounts.openrouter},
+  ], data.requests || 0);
+  renderSplit('qualitySplit', [
+    {label:'Pass', value:qualityCounts.pass},
+    {label:'Fail', value:qualityCounts.fail},
+    {label:'Escalated', value:qualityCounts.escalated},
+    {label:'Sampled', value:qualityCounts.sampled},
+    {label:'Not sampled', value:qualityCounts.not_sampled},
+    {label:'Error', value:qualityCounts.error},
+  ], rows.length);
+  renderSplit('latencyBands', [
+    {label:'<= 1s', value:latencyBands.fast},
+    {label:'1-4s', value:latencyBands.normal},
+    {label:'4-15s', value:latencyBands.slow},
+    {label:'> 15s', value:latencyBands.timeout},
+  ], rows.length);
+  renderSplit('savingsBands', [
+    {label:'Free', value:savingsBands.free},
+    {label:'>= 95%', value:savingsBands.high},
+    {label:'50-95%', value:savingsBands.medium},
+    {label:'< 50%', value:savingsBands.low},
+  ], rows.length);
+}
+
 function renderModels(util, requests){
   const total = Math.max(1, Number(requests || 0));
   const maxCount = Math.max(1, ...MODEL_STACK.map(m => Number((util || {})[m.tier] || 0)));
@@ -809,24 +1103,78 @@ function renderTasks(types, requests){
   }).join('');
 }
 
+function syncFilterOptions(rows){
+  const types = [...new Set((rows || []).map(r => r.task_type).filter(Boolean))].sort();
+  const tiers = [...new Set((rows || []).map(r => r.chosen_tier).filter(Boolean))].sort();
+  const selectedType = filters.type;
+  const selectedTier = filters.tier;
+  el('typeFilter').innerHTML = '<option value="all">All types</option>' + types.map(type =>
+    `<option value="${esc(type)}">${esc(String(type).replace(/_/g, ' '))}</option>`
+  ).join('');
+  el('tierFilter').innerHTML = '<option value="all">All tiers</option>' + tiers.map(tier =>
+    `<option value="${esc(tier)}">${esc(tier)}</option>`
+  ).join('');
+  el('typeFilter').value = types.includes(selectedType) ? selectedType : 'all';
+  el('tierFilter').value = tiers.includes(selectedTier) ? selectedTier : 'all';
+  filters.type = el('typeFilter').value;
+  filters.tier = el('tierFilter').value;
+}
+
+function filteredRows(rows){
+  const q = filters.q;
+  const items = (rows || []).filter(row => {
+    const provider = providerForTier(row.chosen_tier);
+    const verify = verifyState(row);
+    const text = [
+      row.task_preview,
+      row.task_type,
+      row.chosen_tier,
+      provider,
+      verify,
+      row.verdict,
+      row.escalated_to,
+      row.error,
+    ].join(' ').toLowerCase();
+    if(q && !text.includes(q)) return false;
+    if(filters.type !== 'all' && row.task_type !== filters.type) return false;
+    if(filters.tier !== 'all' && row.chosen_tier !== filters.tier) return false;
+    if(filters.provider !== 'all' && provider !== filters.provider) return false;
+    if(filters.verify === 'sampled' && Number(row.verified || 0) <= 0) return false;
+    if(filters.verify !== 'all' && filters.verify !== 'sampled' && verify !== filters.verify) return false;
+    return true;
+  });
+  return items.sort((a,b) => {
+    if(filters.sort === 'time_asc') return Number(a.ts || 0) - Number(b.ts || 0);
+    if(filters.sort === 'latency_desc') return Number(b.dispatch_latency_ms || 0) - Number(a.dispatch_latency_ms || 0);
+    if(filters.sort === 'cost_desc') return Number(b.cost_usd || 0) - Number(a.cost_usd || 0);
+    if(filters.sort === 'savings_desc') return rowSavings(b) - rowSavings(a);
+    if(filters.sort === 'tier_asc') return String(a.chosen_tier || '').localeCompare(String(b.chosen_tier || ''));
+    return Number(b.ts || 0) - Number(a.ts || 0);
+  });
+}
+
 function renderFeed(rows){
-  const items = (rows || []).filter(r => JSON.stringify(r).toLowerCase().includes(filterText));
-  el('decisionTotal').textContent = `${items.length} visible`;
+  const items = filteredRows(rows);
+  const total = (rows || []).length;
+  el('decisionTotal').textContent = `${items.length} of ${total} visible`;
   if(!items.length){
-    el('feed').innerHTML = '<tr><td colspan="6"><div class="empty">No matching decisions.</div></td></tr>';
+    el('feed').innerHTML = '<tr><td colspan="8"><div class="empty">No matching decisions.</div></td></tr>';
     return;
   }
   el('feed').innerHTML = items.map(r => {
     const model = modelForTier(r.chosen_tier);
-    const verdictClass = r.verdict === 'fail' ? 'fail' : r.verdict === 'pass' ? 'pass' : '';
-    const verify = r.verdict || (r.escalated_to ? 'escalated' : 'not sampled');
-    const verifyClass = r.escalated_to && !r.verdict ? 'warn' : verdictClass;
+    const provider = providerForTier(r.chosen_tier);
+    const verify = verifyState(r).replace('_', ' ');
+    const verifyClass = r.error || r.verdict === 'fail' ? 'fail' : r.verdict === 'pass' ? 'pass' : r.escalated_to ? 'warn' : '';
+    const providerClass = provider === 'openrouter' ? 'cloud' : provider === 'cache' ? 'cache' : '';
+    const savings = rowSavings(r);
     return `<tr>
       <td class="task-cell">
         <div class="task-title">${esc(r.task_preview || '')}</div>
         <div class="task-meta">${esc(fmtTime(r.ts))}</div>
       </td>
       <td><span class="pill">${esc(r.task_type || '')}</span></td>
+      <td><span class="pill ${providerClass}">${esc(providerLabel(provider))}</span></td>
       <td>
         <div class="tier-cell" style="--accent:${model.accent}">
           <div class="tiny-logo">${logoHtml(model)}</div>
@@ -837,16 +1185,46 @@ function renderFeed(rows){
         </div>
       </td>
       <td>${usd(r.cost_usd, 6)}</td>
+      <td>${savings.toFixed(1)}%</td>
       <td>${Number(r.dispatch_latency_ms || 0).toFixed(0)} ms</td>
       <td><span class="pill ${verifyClass}">${esc(verify)}</span></td>
     </tr>`;
   }).join('');
 }
 
+function exportCsv(){
+  const rows = filteredRows((lastData && lastData.recent) || []);
+  const header = ['time','task','type','tier','provider','cost_usd','baseline_usd','savings_pct','latency_ms','verify','escalated_to','error'];
+  const csvRows = [header, ...rows.map(r => [
+    r.ts ? new Date(r.ts * 1000).toISOString() : '',
+    r.task_preview || '',
+    r.task_type || '',
+    r.chosen_tier || '',
+    providerForTier(r.chosen_tier),
+    Number(r.cost_usd || 0).toFixed(6),
+    Number(r.baseline_cost_usd || 0).toFixed(6),
+    rowSavings(r).toFixed(1),
+    Number(r.dispatch_latency_ms || 0).toFixed(0),
+    verifyState(r),
+    r.escalated_to || '',
+    r.error || '',
+  ])];
+  const csv = csvRows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `tokentriage-decisions-${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function renderAll(data){
   lastData = data;
+  syncFilterOptions(data.recent || []);
   renderKpis(data);
   renderOverview(data);
+  renderAnalytics(data);
   renderModels(data.tier_utilization || {}, data.requests || 0);
   renderTasks(data.task_types || {}, data.requests || 0);
   renderFeed(data.recent || []);
@@ -871,7 +1249,26 @@ document.querySelectorAll('.tab-button').forEach(btn => {
 el('refresh').addEventListener('click', tick);
 el('windowHours').addEventListener('change', tick);
 el('filter').addEventListener('input', e => {
-  filterText = e.target.value.trim().toLowerCase();
+  filters.q = e.target.value.trim().toLowerCase();
+  renderFeed((lastData && lastData.recent) || []);
+});
+['typeFilter','tierFilter','providerFilter','verifyFilter','sortFilter'].forEach(id => {
+  el(id).addEventListener('change', e => {
+    const key = {
+      typeFilter:'type',
+      tierFilter:'tier',
+      providerFilter:'provider',
+      verifyFilter:'verify',
+      sortFilter:'sort',
+    }[id];
+    filters[key] = e.target.value;
+    renderFeed((lastData && lastData.recent) || []);
+  });
+});
+el('exportCsv').addEventListener('click', exportCsv);
+el('windowHours').addEventListener('change', () => {
+  filters.type = 'all';
+  filters.tier = 'all';
   renderFeed((lastData && lastData.recent) || []);
 });
 tick();

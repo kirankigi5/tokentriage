@@ -53,11 +53,11 @@ except ImportError:
 
 
 def should_sample(policy: dict, chosen_tier: str, task: str | None = None) -> bool:
-    """Only cheap-tier answers are sampled; T3 answers are trusted by design.
+    """Only cheap local answers are sampled.
 
     Sampling is keyed off the task hash (not RNG) so which answers get verified
     — and therefore which escalate — is reproducible across benchmark runs."""
-    if chosen_tier in ("T0", "T3"):
+    if chosen_tier in ("T0", "T3", "T4", "T5", "T6", "T7"):
         return False
     rate = float(policy.get("escalation", {}).get("verify_sample_rate", 0.25))
     if task is not None:

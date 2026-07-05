@@ -51,11 +51,11 @@
   }
   a{color:inherit}
   .shell{
-    width:min(1580px,100%);
+    width:min(1540px,100%);
     min-height:calc(100vh - 28px);
     margin:0 auto;
     display:grid;
-    grid-template-columns:236px minmax(0,1fr);
+    grid-template-columns:220px minmax(0,1fr);
     gap:12px;
   }
   .sidebar{
@@ -125,8 +125,9 @@
   .legend{
     display:grid;
     align-content:start;
-    gap:8px;
-    padding-top:4px;
+    gap:10px;
+    padding-top:8px;
+    border-top:1px solid var(--rule);
   }
   .legend h2{
     margin:0 0 2px;
@@ -135,10 +136,15 @@
     text-transform:uppercase;
   }
   .legend-row{
+    min-height:34px;
     display:grid;
     grid-template-columns:10px minmax(0,1fr);
     align-items:center;
     gap:8px;
+    padding:0 8px;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:color-mix(in srgb, var(--panel) 72%, transparent);
     color:var(--muted);
     font:12px/1.3 var(--mono);
   }
@@ -151,12 +157,12 @@
   .page{
     min-width:0;
     display:grid;
-    grid-template-rows:auto 1fr;
+    grid-template-rows:auto minmax(0,1fr);
     gap:12px;
   }
   .hero{
     display:grid;
-    grid-template-columns:minmax(0,1fr) minmax(360px,.58fr);
+    grid-template-columns:minmax(0,1.5fr) minmax(360px,.7fr);
     gap:12px;
   }
   .hero-card,
@@ -171,14 +177,18 @@
     box-shadow:var(--shadow);
   }
   .hero-card{
-    min-height:160px;
+    min-height:150px;
     display:grid;
-    align-content:center;
-    gap:14px;
-    padding:22px;
+    align-content:space-between;
+    gap:16px;
+    padding:20px;
     background:
       linear-gradient(135deg, color-mix(in srgb, var(--cache) 10%, transparent), transparent 42%),
       color-mix(in srgb, var(--panel) 94%, transparent);
+  }
+  .hero-copy{
+    display:grid;
+    gap:12px;
   }
   .eyebrow{
     color:var(--cache);
@@ -186,10 +196,10 @@
     text-transform:uppercase;
   }
   .hero-card h2{
-    max-width:820px;
+    max-width:760px;
     margin:0;
-    font-size:clamp(30px,4vw,54px);
-    line-height:.98;
+    font-size:clamp(28px,3.4vw,46px);
+    line-height:1;
     letter-spacing:0;
   }
   .hero-card p{
@@ -198,17 +208,41 @@
     color:var(--muted);
     font-size:15px;
   }
+  .hero-strip{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .hero-chip{
+    min-height:28px;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    border:1px solid var(--rule);
+    border-radius:999px;
+    background:var(--panel);
+    padding:0 10px;
+    color:var(--muted);
+    font:900 11px/1 var(--mono);
+  }
+  .hero-chip::before{
+    content:"";
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:var(--accent,var(--cache));
+  }
   .proof-grid{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:12px;
+    gap:10px;
   }
   .proof-card{
-    min-height:88px;
+    min-height:70px;
     display:grid;
     align-content:center;
-    gap:6px;
-    padding:14px;
+    gap:7px;
+    padding:12px;
     box-shadow:none;
   }
   .proof-card span{
@@ -220,13 +254,20 @@
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
-    font:900 clamp(20px,3vw,34px)/1 var(--mono);
+    font:900 clamp(18px,2.2vw,28px)/1 var(--mono);
+  }
+  .proof-card small{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:var(--muted);
+    font:800 10px/1 var(--mono);
   }
   .proof-card.save b{color:var(--cache)}
   .architecture-shell{
     min-height:0;
     display:grid;
-    grid-template-columns:minmax(860px,1fr) 330px;
+    grid-template-columns:minmax(820px,1fr) 340px;
     gap:12px;
   }
   .canvas{
@@ -361,9 +402,9 @@
     gap:10px;
   }
   .stage{
-    min-height:96px;
+    min-height:110px;
     display:grid;
-    align-content:start;
+    grid-template-rows:auto auto 1fr;
     gap:8px;
     padding:12px;
     box-shadow:none;
@@ -384,12 +425,12 @@
   .side{
     min-width:0;
     display:grid;
-    grid-template-rows:auto auto 1fr;
+    grid-template-rows:auto auto minmax(0,1fr);
     gap:12px;
   }
   .detail-panel,
   .scenario-panel{
-    padding:14px;
+    padding:12px;
     box-shadow:none;
   }
   .panel-title{
@@ -408,12 +449,13 @@
     font:800 10px/1 var(--mono);
   }
   .detail-panel h3{
-    margin:0 0 6px;
-    font-size:18px;
+    margin:0 0 7px;
+    font-size:17px;
   }
   .detail-panel p{
     margin:0 0 12px;
     color:var(--muted);
+    font-size:13px;
   }
   .kv{
     display:grid;
@@ -446,10 +488,10 @@
     gap:8px;
   }
   .scenario{
-    min-height:42px;
-    display:flex;
+    min-height:46px;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
     align-items:center;
-    justify-content:space-between;
     gap:10px;
     border:1px solid var(--rule);
     border-radius:8px;
@@ -468,6 +510,7 @@
   .scenario span{
     color:var(--muted);
     font-size:10px;
+    text-align:right;
   }
   .timeline{
     min-height:0;
@@ -552,7 +595,8 @@
     body{padding:12px}
     .hero{grid-template-columns:1fr}
     .proof-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .flow-map{min-height:720px}
+    .hero-card{min-height:auto}
+    .flow-map{min-height:780px}
     .node{width:154px}
     .node[data-id="client"]{--x:50%!important;--y:7%!important}
     .node[data-id="gateway"]{--x:50%!important;--y:18%!important}
@@ -561,9 +605,10 @@
     .node[data-id="triage"]{--x:50%!important;--y:51%!important}
     .node[data-id="mcp"]{--x:24%!important;--y:62%!important}
     .node[data-id="policy"]{--x:76%!important;--y:62%!important}
-    .node[data-id="models"]{--x:50%!important;--y:73%!important}
-    .node[data-id="verifier"]{--x:50%!important;--y:84%!important}
-    .node[data-id="dashboard"]{--x:50%!important;--y:95%!important}
+    .node[data-id="models"]{--x:50%!important;--y:70%!important}
+    .node[data-id="openrouter"]{--x:50%!important;--y:80%!important}
+    .node[data-id="verifier"]{--x:50%!important;--y:90%!important}
+    .node[data-id="dashboard"]{--x:50%!important;--y:98%!important}
     .links{display:none}
     .stage-grid{grid-template-columns:1fr}
     .side{grid-template-columns:1fr}
@@ -599,7 +644,7 @@
     </nav>
 
     <div class="legend">
-      <h2>Architecture Lens</h2>
+      <h2>System Lens</h2>
       <div class="legend-row"><i class="dot" style="--accent:var(--cache)"></i><span>Cost-saving path</span></div>
       <div class="legend-row"><i class="dot" style="--accent:var(--qwen)"></i><span>Routing intelligence</span></div>
       <div class="legend-row"><i class="dot" style="--accent:var(--verify)"></i><span>Quality guardrail</span></div>
@@ -610,15 +655,25 @@
   <main class="page">
     <section class="hero">
       <div class="hero-card">
-        <div class="eyebrow">Agent FinOps Control Plane</div>
-        <h2>Cheapest sufficient model, with proof.</h2>
-        <p>TokenTriage is a local-first routing gateway that wraps every agent call with security, semantic cache, policy, MCP cost intelligence, verifier sampling, and a decision receipt.</p>
+        <div class="hero-copy">
+          <div class="eyebrow">Agent FinOps Control Plane</div>
+          <h2>Local-first routing, cloud rescue only when quality needs it.</h2>
+          <p>TokenTriage wraps every agent request with security, semantic cache, triage, MCP-backed policy, local model dispatch, verifier sampling, OpenRouter rescue, and a decision receipt.</p>
+        </div>
+        <div class="hero-strip" aria-label="Architecture highlights">
+          <span class="hero-chip" style="--accent:var(--cache)">T0 cache first</span>
+          <span class="hero-chip" style="--accent:var(--qwen)">Qwen local tiers</span>
+          <span class="hero-chip" style="--accent:var(--verify)">Verifier gate</span>
+          <span class="hero-chip" style="--accent:var(--pro)">Policy firewall</span>
+        </div>
       </div>
       <div class="proof-grid">
-        <div class="proof-card save"><span>Killer Metric</span><b>98.1%</b></div>
-        <div class="proof-card"><span>API Surface</span><b>OpenAI + Gemini</b></div>
-        <div class="proof-card"><span>No-key Demo</span><b>Ollama Local</b></div>
-        <div class="proof-card"><span>Evidence</span><b>Reports + CSV</b></div>
+        <div class="proof-card save"><span>Killer Metric</span><b>98.1%</b><small>lower inference cost</small></div>
+        <div class="proof-card"><span>Primary Runtime</span><b>Ollama</b><small>no-key local demo</small></div>
+        <div class="proof-card"><span>Cloud Rescue</span><b>OpenRouter</b><small>T4-T7 on failure or policy</small></div>
+        <div class="proof-card"><span>API Surface</span><b>OpenAI</b><small>Gemini-compatible ingress retained</small></div>
+        <div class="proof-card"><span>Evidence</span><b>Reports</b><small>CSV, metrics, dashboard</small></div>
+        <div class="proof-card"><span>Ledger</span><b>Dashboard</b><small>same decision log</small></div>
       </div>
     </section>
 
@@ -637,11 +692,14 @@
               <path data-link="cache-triage" d="M42 38 H58"></path>
               <path data-link="triage-mcp" d="M66 44 V54 H28 V60"></path>
               <path data-link="mcp-policy" d="M28 66 H66 V60"></path>
-              <path data-link="policy-models" d="M66 66 H43 V74"></path>
-              <path data-link="models-verifier" d="M43 80 H66"></path>
-              <path data-link="models-dashboard" d="M43 80 H89"></path>
-              <path data-link="verifier-dashboard" d="M66 80 H89"></path>
-              <path data-link="cache-dashboard" d="M34 44 V92 H89 V80"></path>
+              <path data-link="policy-models" d="M66 66 H38 V74"></path>
+              <path data-link="models-openrouter" d="M46 80 H58"></path>
+              <path data-link="models-verifier" d="M38 82 V89"></path>
+              <path data-link="openrouter-verifier" d="M66 82 V89 H46"></path>
+              <path data-link="models-dashboard" d="M38 80 H89 V88"></path>
+              <path data-link="openrouter-dashboard" d="M66 80 H89 V88"></path>
+              <path data-link="verifier-dashboard" d="M38 93 H89"></path>
+              <path data-link="cache-dashboard" d="M34 44 V96 H89 V92"></path>
             </svg>
             <div class="packet" id="packet" style="--x:12%;--y:10%"></div>
             <button class="node" data-id="client" style="--x:14%;--y:12%;--accent:var(--qwen)">
@@ -665,29 +723,32 @@
             <button class="node" data-id="policy" style="--x:66%;--y:63%;--accent:var(--verify)">
               <div class="node-logo">YAML</div><div class="node-copy"><b>Policy</b><span>floors + caps</span></div>
             </button>
-            <button class="node" data-id="models" style="--x:43%;--y:78%;--accent:var(--cache)">
-              <div class="node-logo"><img src="/imgs/logos/qwen.png" alt=""></div><div class="node-copy"><b>Models</b><span>Qwen local tiers</span></div>
+            <button class="node" data-id="models" style="--x:38%;--y:78%;--accent:var(--cache)">
+              <div class="node-logo"><img src="/imgs/logos/qwen.png" alt=""></div><div class="node-copy"><b>Local Models</b><span>Qwen T1-T3</span></div>
             </button>
-            <button class="node" data-id="verifier" style="--x:66%;--y:78%;--accent:var(--verify)">
+            <button class="node" data-id="openrouter" style="--x:66%;--y:78%;--accent:var(--verify)">
+              <div class="node-logo"><img src="/imgs/logos/openrouter-icon.webp" alt=""></div><div class="node-copy"><b>OpenRouter</b><span>rescue catalog</span></div>
+            </button>
+            <button class="node" data-id="verifier" style="--x:38%;--y:92%;--accent:var(--verify)">
               <div class="node-logo">V</div><div class="node-copy"><b>Verifier</b><span>sample + escalate</span></div>
             </button>
-            <button class="node" data-id="dashboard" style="--x:89%;--y:78%;--accent:var(--cache)">
+            <button class="node" data-id="dashboard" style="--x:89%;--y:92%;--accent:var(--cache)">
               <div class="node-logo">UI</div><div class="node-copy"><b>Dashboard</b><span>receipt + savings</span></div>
             </button>
           </div>
         </section>
 
         <section class="stage-grid" aria-label="Winning proof points">
-          <div class="stage"><span>Glass-box trace</span><b>Every call is replayable</b><p>Security, cache, triage, policy, dispatch, verifier, and receipt are exposed as steps.</p></div>
-          <div class="stage"><span>Interoperability</span><b>OpenAI + Gemini ingress</b><p>Existing clients change only base URL while TokenTriage controls routing.</p></div>
-          <div class="stage"><span>Cost science</span><b>MCP-backed benchmarks</b><p>Routing uses task-type accuracy floors and recorded costs, not vibes.</p></div>
-          <div class="stage"><span>Evidence loop</span><b>Reports + tuning</b><p>Verification feedback can update routing thresholds over time.</p></div>
+          <div class="stage"><span>Traceability</span><b>Every call is explainable</b><p>Security, cache, triage, policy, dispatch, verifier, and receipt are visible in the UI.</p></div>
+          <div class="stage"><span>Privacy posture</span><b>Local by default</b><p>Normal work stays on Ollama tiers; OpenRouter appears only for rescue or sensitive policy routes.</p></div>
+          <div class="stage"><span>Cost science</span><b>MCP-backed thresholds</b><p>Routing uses task-type accuracy floors, prices, latency, and budget state.</p></div>
+          <div class="stage"><span>Evidence loop</span><b>Dashboard + reports</b><p>The same SQLite decisions drive analytics, CSV export, and judge-ready evidence.</p></div>
         </section>
       </div>
 
       <aside class="side">
         <section class="detail-panel" id="detailPanel">
-          <div class="panel-title"><b>Component</b><span>click a node</span></div>
+          <div class="panel-title"><b>Inspector</b><span>click a node</span></div>
           <h3>FastAPI Gateway</h3>
           <p>OpenAI and Gemini-compatible entrypoint. It streams routing events to the chat UI and returns a TokenTriage receipt with every response.</p>
           <div class="kv">
@@ -698,7 +759,7 @@
         </section>
 
         <section class="scenario-panel">
-          <div class="panel-title"><b>Scenario Simulator</b><span>lights the path</span></div>
+          <div class="panel-title"><b>Route Simulator</b><span>lights the path</span></div>
           <div class="scenario-buttons" id="scenarios"></div>
         </section>
 
@@ -750,8 +811,13 @@ const COMPONENTS = {
   },
   models: {
     title:'Model Pool',
-    text:'Local Ollama tiers are the no-key demo path. Any tier can be swapped to Gemini or OpenAI through the provider abstraction.',
-    rows:[['T1/T2/T3','Qwen via Ollama'],['Providers','ollama/gemini/openai'],['Baseline','Gemini frontier yardstick']]
+    text:'Local Ollama tiers are the no-key demo path. They answer first when sufficient, keeping normal tasks cheap and private.',
+    rows:[['T1/T2/T3','Qwen via Ollama'],['Role','cheap local first pass'],['Fallback','OpenRouter if quality fails']]
+  },
+  openrouter: {
+    title:'OpenRouter Rescue',
+    text:'When the verifier rejects a local answer, TokenTriage escalates to the best matching OpenRouter free model: Gemma for general work, gpt-oss for fast responses, Qwen Next for reasoning, and Qwen Coder for code.',
+    rows:[['T4','Gemma 31B general'],['T5/T6/T7','gpt-oss / Qwen Next / Qwen Coder'],['Why it wins','quality rescue without always paying cloud']]
   },
   verifier: {
     title:'Verifier Agent',
@@ -784,6 +850,21 @@ const SCENARIOS = [
     ]
   },
   {
+    id:'rescue',
+    title:'Quality Rescue',
+    meta:'local fail -> OpenRouter',
+    status:'verifier escalates to T4 rescue',
+    nodes:['client','gateway','security','cache','triage','mcp','policy','models','verifier','openrouter','dashboard'],
+    links:['client-gateway','gateway-security','security-cache','cache-triage','triage-mcp','mcp-policy','policy-models','models-verifier','models-openrouter','openrouter-verifier','openrouter-dashboard'],
+    steps:[
+      ['Local Models','Qwen answers first to avoid cloud by default','var(--cache)'],
+      ['Verifier Agent','flags thin or incomplete local answer','var(--verify)'],
+      ['OpenRouter Rescue','matched free model re-answers through T4-T7','var(--verify)'],
+      ['Privacy Firewall','cloud context policy limits prior turns','var(--pro)'],
+      ['Savings Receipt','records local attempt, rescue tier, and final cost','var(--cache)']
+    ]
+  },
+  {
     id:'cache',
     title:'Cache Hit',
     meta:'T0 returns free',
@@ -802,14 +883,15 @@ const SCENARIOS = [
     title:'Sensitive Escalation',
     meta:'policy protects quality',
     status:'minimum tier and verifier engaged',
-    nodes:['client','gateway','security','cache','triage','mcp','policy','models','verifier','dashboard'],
-    links:['client-gateway','gateway-security','security-cache','cache-triage','triage-mcp','mcp-policy','policy-models','models-verifier','verifier-dashboard'],
+    nodes:['client','gateway','security','cache','triage','mcp','policy','models','verifier','openrouter','dashboard'],
+    links:['client-gateway','gateway-security','security-cache','cache-triage','triage-mcp','mcp-policy','policy-models','models-verifier','models-openrouter','openrouter-verifier','openrouter-dashboard'],
     steps:[
       ['Triage Agent','legal or financial task detected','var(--qwen)'],
       ['Pricing MCP','checks benchmarks and budget','var(--qwen)'],
       ['Policy Engine','min_tier override applies','var(--verify)'],
-      ['Model Pool','routes to stronger local tier','var(--pro)'],
+      ['Model Pool','starts on strongest local tier','var(--pro)'],
       ['Verifier Agent','samples answer for quality','var(--verify)'],
+      ['OpenRouter Rescue','available if local quality fails','var(--verify)'],
       ['Dashboard','records escalation and cost delta','var(--cache)']
     ]
   },
@@ -842,7 +924,7 @@ let packetFrame = null;
 function renderDetail(id){
   const c = COMPONENTS[id] || COMPONENTS.gateway;
   detailPanel.innerHTML = `
-    <div class="panel-title"><b>Component</b><span>${esc(id)}</span></div>
+    <div class="panel-title"><b>Inspector</b><span>${esc(id)}</span></div>
     <h3>${esc(c.title)}</h3>
     <p>${esc(c.text)}</p>
     <div class="kv">${c.rows.map(([k,v]) => `

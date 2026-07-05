@@ -78,10 +78,12 @@ def _startup() -> None:
 
 def _tt_meta(result) -> dict:
     """The TokenTriage routing receipt returned to clients (both endpoints)."""
+    tier = TIERS.get(result.chosen_tier)
     return {
         "task_id": result.task_id,
         "chosen_tier": result.chosen_tier,
-        "model_id": TIERS[result.chosen_tier].model_id if result.chosen_tier in TIERS else result.chosen_tier,
+        "model_id": tier.model_id if tier else result.chosen_tier,
+        "provider": tier.provider if tier else "",
         "task_type": result.task_type,
         "complexity": result.complexity,
         "rationale": result.rationale,

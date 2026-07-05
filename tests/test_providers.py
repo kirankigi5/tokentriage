@@ -2,7 +2,7 @@ import pytest
 import httpx
 from unittest.mock import patch, MagicMock
 
-from tokentriage.providers import _ollama_generate
+from tokentriage.providers import _ollama_generate, _openrouter_generate
 
 def test_retry_on_timeout():
     """Verify exponential backoff retries transient errors up to max_retries."""
@@ -69,3 +69,74 @@ def test_retry_on_429():
             assert text == "success_after_429"
             assert mock_post.call_count == 2
             assert mock_sleep.call_count == 1
+
+
+def test_openrouter_uses_openai_compatible_base_url(monkeypatch):
+    """OpenRouter dispatch should use the OpenAI SDK with OpenRouter base URL."""
+    calls = {}
+
+    class DummyUsage:
+        prompt_tokens = 4
+        completion_tokens = 5
+
+    class DummyMessage:
+        content = "rescued answer"
+
+    class DummyChoice:
+        message = DummyMessage()
+
+    class DummyCompletions:
+        def create(self, model, messages):
+            calls["model"] = model
+            calls["messages"] = messages
+            return type("Resp", (), {"choices": [DummyChoice()], "usage": DummyUsage()})()
+
+    class DummyClient:
+        def __init__(self, **kwargs):
+            calls["client"] = kwargs
+            self.chat = type("Chat", (), {"completions": DummyCompletions()})()
+
+    monkeypatch.setattr("openai.OpenAI", DummyClient)
+    text, itok, otok = _openrouter_generate(
+        "google/gemma-4-31b-it:free",
+        "or-key",
+        [{"role": "user", "content": "fix this"}],
+    )
+
+    assert text == "rescued answer"
+    assert (itok, otok) == (4, 5)
+    assert calls["model"] == "google/gemma-4-31b-it:free"
+    assert str(calls["client"]["base_url"]).rstrip("/") == "https://openrouter.ai/api/v1"
+
+
+def test_openrouter_zero_usage_falls_back_to_estimated_tokens(monkeypatch):
+    """Free/provider-routed responses may report zero usage; receipts still need a baseline."""
+
+    class ZeroUsage:
+        prompt_tokens = 0
+        completion_tokens = 0
+
+    class DummyMessage:
+        content = "This is a non-empty OpenRouter answer with enough text for token estimation."
+
+    class DummyChoice:
+        message = DummyMessage()
+
+    class DummyCompletions:
+        def create(self, model, messages):
+            return type("Resp", (), {"choices": [DummyChoice()], "usage": ZeroUsage()})()
+
+    class DummyClient:
+        def __init__(self, **kwargs):
+            self.chat = type("Chat", (), {"completions": DummyCompletions()})()
+
+    monkeypatch.setattr("openai.OpenAI", DummyClient)
+    text, itok, otok = _openrouter_generate(
+        "openai/gpt-oss-20b:free",
+        "or-key",
+        [{"role": "user", "content": "Compare SOC 2, ISO 27001, and GDPR obligations."}],
+    )
+
+    assert text
+    assert itok > 0
+    assert otok > 0

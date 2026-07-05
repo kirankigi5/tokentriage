@@ -13,14 +13,15 @@ policies:
   # Per-task-type overrides. Tiers: T0=cache, T1=flash-lite, T2=flash, T3=pro.
   task_overrides:
     legal_or_financial:
-      min_tier: T3          # sensitive tasks are NEVER downgraded (safety feature)
+      min_tier: T3          # no-key fallback is strongest local tier
+      prefer_cloud: true    # with OpenRouter key, route compliance/risk work to T4
     factual_lookup:
       max_tier: T1          # never waste Pro on lookups
     creative_short:
       max_tier: T2
 
   escalation:
-    max_hops: 2             # verifier fail -> at most 2 tier bumps
+    max_hops: 3             # verifier fail -> local tiers, then OpenRouter rescue if configured
     verify_sample_rate: 0.25  # fraction of cheap-tier answers sent to verifier
 
   cache:
