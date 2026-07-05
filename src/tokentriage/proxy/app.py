@@ -427,6 +427,24 @@ def demo_replay_list():
     }
 
 
+@app.get("/demo/replay/questions")
+def demo_replay_questions():
+    """Return only the judge-demo prompts intended for one-click playback."""
+    _ensure_judge_mode()
+    featured = (0, 2, 3)
+    return {
+        "count": len(featured),
+        "items": [
+            {
+                "idx": idx,
+                "question": JUDGE_SCENARIOS[idx]["task"],
+                "task_type": JUDGE_SCENARIOS[idx].get("task_type", "replay"),
+            }
+            for idx in featured
+        ],
+    }
+
+
 @app.get("/demo/replay/item/{idx}")
 def demo_replay_item(idx: int):
     """Return the prerecorded replay item at index `idx`."""

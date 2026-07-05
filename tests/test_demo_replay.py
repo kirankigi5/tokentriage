@@ -17,6 +17,9 @@ def test_judge_mode_gating():
         
         response = client.get("/demo/replay/list")
         assert response.status_code == 404
+
+        response = client.get("/demo/replay/questions")
+        assert response.status_code == 404
         
         response = client.get("/demo/replay/item/0")
         assert response.status_code == 404
@@ -37,6 +40,17 @@ def test_judge_mode_enabled():
         data = response.json()
         assert data["count"] >= 6
         assert data["items"][0]["task_preview"].startswith("What is the capital")
+
+        response = client.get("/demo/replay/questions")
+        assert response.status_code == 200
+        questions = response.json()
+        assert questions["count"] == 3
+        assert questions["items"][0]["idx"] == 0
+        assert "Australia" in questions["items"][0]["question"]
+        assert questions["items"][1]["idx"] == 2
+        assert "vendor" in questions["items"][1]["question"].lower()
+        assert questions["items"][2]["idx"] == 3
+        assert "GDPR" in questions["items"][2]["question"]
 
         response = client.get("/demo/replay/next")
         assert response.status_code == 200
