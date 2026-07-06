@@ -591,18 +591,41 @@
     .hero{grid-template-columns:1fr}
     .proof-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .hero-card{min-height:auto}
-    .flow-map{min-height:780px}
+    .flow-map{min-height:720px}
     .node{width:154px}
-    .node[data-id="client"]{--x:50%!important;--y:7%!important}
-    .node[data-id="gateway"]{--x:50%!important;--y:18%!important}
-    .node[data-id="security"]{--x:50%!important;--y:29%!important}
-    .node[data-id="cache"]{--x:50%!important;--y:40%!important}
-    .node[data-id="triage"]{--x:50%!important;--y:51%!important}
-    .node[data-id="mcp"]{--x:24%!important;--y:62%!important}
-    .node[data-id="policy"]{--x:76%!important;--y:62%!important}
-    .node[data-id="models"]{--x:50%!important;--y:70%!important}
-    .node[data-id="openrouter"]{--x:50%!important;--y:80%!important}
-    .node[data-id="verifier"]{--x:50%!important;--y:90%!important}
+    .node[data-id="client"],
+    .node[data-id="gateway"],
+    .node[data-id="security"]{
+      width:min(30vw,128px);
+      min-height:58px;
+      grid-template-columns:24px minmax(0,1fr);
+      gap:5px;
+      padding:6px;
+    }
+    .node[data-id="client"]{--x:17%!important;--y:8%!important}
+    .node[data-id="gateway"]{--x:50%!important;--y:8%!important}
+    .node[data-id="security"]{--x:83%!important;--y:8%!important}
+    .node[data-id="client"] .node-logo,
+    .node[data-id="gateway"] .node-logo,
+    .node[data-id="security"] .node-logo{
+      width:24px;
+      height:24px;
+      border-radius:7px;
+      font-size:8px;
+    }
+    .node[data-id="client"] .node-copy b,
+    .node[data-id="gateway"] .node-copy b,
+    .node[data-id="security"] .node-copy b{font-size:9px}
+    .node[data-id="client"] .node-copy span,
+    .node[data-id="gateway"] .node-copy span,
+    .node[data-id="security"] .node-copy span{font-size:7px}
+    .node[data-id="cache"]{--x:50%!important;--y:23%!important}
+    .node[data-id="triage"]{--x:50%!important;--y:36%!important}
+    .node[data-id="mcp"]{--x:24%!important;--y:50%!important}
+    .node[data-id="policy"]{--x:76%!important;--y:50%!important}
+    .node[data-id="models"]{--x:50%!important;--y:62%!important}
+    .node[data-id="openrouter"]{--x:50%!important;--y:75%!important}
+    .node[data-id="verifier"]{--x:50%!important;--y:88%!important}
     .node[data-id="dashboard"]{--x:50%!important;--y:98%!important}
     .links{display:none}
     .stage-grid{grid-template-columns:1fr}
