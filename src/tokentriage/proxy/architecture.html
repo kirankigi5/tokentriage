@@ -267,7 +267,7 @@
   .architecture-shell{
     min-height:0;
     display:grid;
-    grid-template-columns:minmax(820px,1fr) 340px;
+    grid-template-columns:minmax(740px,1fr) 320px;
     gap:12px;
   }
   .canvas{
@@ -297,7 +297,7 @@
   }
   .flow-map{
     position:relative;
-    min-height:640px;
+    min-height:520px;
     border:1px solid var(--rule);
     border-radius:10px;
     background:
@@ -345,13 +345,13 @@
     position:absolute;
     left:var(--x);
     top:var(--y);
-    width:150px;
-    min-height:62px;
+    width:138px;
+    min-height:56px;
     display:grid;
-    grid-template-columns:30px minmax(0,1fr);
+    grid-template-columns:28px minmax(0,1fr);
     align-items:center;
-    gap:8px;
-    padding:8px;
+    gap:7px;
+    padding:7px;
     border:1px solid var(--rule);
     border-radius:10px;
     background:color-mix(in srgb, var(--panel) 94%, transparent);
@@ -370,8 +370,8 @@
     box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent), 0 12px 30px rgba(0,0,0,.1);
   }
   .node-logo{
-    width:30px;
-    height:30px;
+    width:28px;
+    height:28px;
     display:grid;
     place-items:center;
     border-radius:8px;
@@ -394,8 +394,8 @@
     text-overflow:ellipsis;
     white-space:nowrap;
   }
-  .node-copy b{font-size:12px}
-  .node-copy span{margin-top:3px;color:var(--muted);font:800 9px/1.2 var(--mono)}
+  .node-copy b{font-size:11px}
+  .node-copy span{margin-top:3px;color:var(--muted);font:800 8px/1.2 var(--mono)}
   .stage-grid{
     display:grid;
     grid-template-columns:repeat(4,minmax(0,1fr));
@@ -578,17 +578,12 @@
     .timeline{grid-column:1/-1;max-height:260px}
   }
   @media (min-width:1041px) and (max-width:1450px){
-    .node{
-      width:136px;
-      grid-template-columns:28px minmax(0,1fr);
-      gap:7px;
-      padding:7px;
-    }
+    .node{width:128px}
     .node-logo{
       width:28px;
       height:28px;
     }
-    .node-copy b{font-size:11px}
+    .node-copy b{font-size:10px}
     .node-copy span{font-size:8px}
   }
   @media (max-width:720px){
@@ -686,9 +681,9 @@
           </div>
           <div class="flow-map" id="flowMap">
             <svg class="links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-              <path data-link="client-gateway" d="M22 12 H34"></path>
-              <path data-link="gateway-security" d="M45 12 H58"></path>
-              <path data-link="security-cache" d="M66 17 V30 H34 V36"></path>
+              <path data-link="client-gateway" d="M25 12 H36"></path>
+              <path data-link="gateway-security" d="M48 12 H59"></path>
+              <path data-link="security-cache" d="M71 17 V30 H34 V36"></path>
               <path data-link="cache-triage" d="M42 38 H58"></path>
               <path data-link="triage-mcp" d="M66 44 V54 H28 V60"></path>
               <path data-link="mcp-policy" d="M28 66 H66 V60"></path>
@@ -702,14 +697,14 @@
               <path data-link="cache-dashboard" d="M34 44 V96 H89 V92"></path>
             </svg>
             <div class="packet" id="packet" style="--x:12%;--y:10%"></div>
-            <button class="node" data-id="client" style="--x:14%;--y:12%;--accent:var(--qwen)">
-              <div class="node-logo">API</div><div class="node-copy"><b>Clients</b><span>OpenAI + Gemini</span></div>
+            <button class="node" data-id="client" style="--x:17%;--y:12%;--accent:var(--qwen)">
+              <div class="node-logo">API</div><div class="node-copy"><b>Client apps</b><span>OpenAI/Gemini-compatible</span></div>
             </button>
-            <button class="node" data-id="gateway" style="--x:40%;--y:12%;--accent:var(--qwen)">
-              <div class="node-logo"><img src="/imgs/logos/app_logo.png" alt=""></div><div class="node-copy"><b>Gateway</b><span>stream + receipt</span></div>
+            <button class="node" data-id="gateway" style="--x:42%;--y:12%;--accent:var(--qwen)">
+              <div class="node-logo"><img src="/imgs/logos/app_logo.png" alt=""></div><div class="node-copy"><b>FastAPI gateway</b><span>/v1 + /v1beta</span></div>
             </button>
-            <button class="node" data-id="security" style="--x:66%;--y:12%;--accent:var(--pro)">
-              <div class="node-logo">SG</div><div class="node-copy"><b>Security</b><span>sanitize + block</span></div>
+            <button class="node" data-id="security" style="--x:67%;--y:12%;--accent:var(--pro)">
+              <div class="node-logo">SG</div><div class="node-copy"><b>Security gateway</b><span>sanitize + quarantine</span></div>
             </button>
             <button class="node" data-id="cache" style="--x:34%;--y:39%;--accent:var(--cache)">
               <div class="node-logo"><img src="/imgs/logos/nomic.png" alt=""></div><div class="node-copy"><b>Cache T0</b><span>$0 hit path</span></div>
