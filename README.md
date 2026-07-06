@@ -1,5 +1,9 @@
 # TokenTriage
 
+<p align="center">
+  <img src="imgs/logos/app_logo.png" alt="TokenTriage logo" width="120">
+</p>
+
 **A local-first inference router for AI agents that proves every dollar it saves.**
 
 TokenTriage is a FastAPI gateway that sits between agent apps and LLM providers.
