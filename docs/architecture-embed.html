@@ -1,0 +1,1033 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TokenTriage - Interactive Architecture</title>
+<style>
+  /* Embed Overrides */
+  .sidebar, .hero, .detail-panel, .stage { display: none !important; }
+  .shell { grid-template-columns: 1fr !important; min-height: auto !important; margin: 0 !important; gap: 0 !important; }
+  body { background: transparent !important; padding: 0 !important; }
+  .architecture-shell { display: grid !important; grid-template-columns: 1fr 340px !important; gap: 30px !important; height: 100vh !important; }
+  .canvas { height: 100% !important; }
+  .scenario-panel { margin-top: 0 !important; height: 100% !important; padding-right: 15px !important; }
+  .scenario { display: flex !important; flex-direction: column !important; align-items: flex-start !important; padding: 12px !important; gap: 4px !important; height: auto !important; }
+  .scenario span { text-align: left !important; font-size: 11px !important; }
+  :root{
+    color-scheme:light;
+    --paper:#f8f5ee;
+    --panel:#fffdf8;
+    --panel-2:#f0eee7;
+    --ink:#17201c;
+    --muted:#6a706b;
+    --rule:#d7d0c2;
+    --cache:#168a68;
+    --qwen:#385acb;
+    --pro:#c24a3a;
+    --verify:#a66b11;
+    --shadow:0 18px 55px rgba(28,32,28,.12);
+    --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    --sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      color-scheme:dark;
+      --paper:#151512;
+      --panel:#1e1e19;
+      --panel-2:#28271f;
+      --ink:#f1efe7;
+      --muted:#aaa59a;
+      --rule:#3b382f;
+      --cache:#46c59c;
+      --qwen:#7f9aff;
+      --pro:#ff846f;
+      --verify:#e1a540;
+      --shadow:0 18px 55px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{min-height:100%;margin:0}
+  body{
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--rule) 35%, transparent) 1px, transparent 1px) 0 0/42px 42px,
+      linear-gradient(0deg, color-mix(in srgb, var(--rule) 28%, transparent) 1px, transparent 1px) 0 0/42px 42px,
+      linear-gradient(135deg, color-mix(in srgb, var(--cache) 7%, transparent), transparent 34%),
+      var(--paper);
+    color:var(--ink);
+    font:14px/1.45 var(--sans);
+    padding:14px;
+  }
+  a{color:inherit}
+  .shell{
+    width:min(1540px,100%);
+    min-height:calc(100vh - 28px);
+    margin:0 auto;
+    display:grid;
+    grid-template-columns:220px minmax(0,1fr);
+    gap:12px;
+  }
+  .sidebar{
+    min-height:0;
+    display:grid;
+    grid-template-rows:auto auto auto 1fr;
+    gap:12px;
+    padding:12px;
+    border:1px solid var(--rule);
+    border-radius:12px;
+    background:color-mix(in srgb, var(--panel) 94%, transparent);
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+  }
+  .brand-mark{
+    width:36px;
+    height:36px;
+    object-fit:contain;
+    border:1px solid var(--ink);
+    border-radius:8px;
+    background:var(--panel);
+    box-shadow:4px 4px 0 color-mix(in srgb, var(--cache) 28%, transparent);
+  }
+  h1{
+    margin:0;
+    font-size:17px;
+    line-height:1.05;
+  }
+  .brand p{
+    margin:3px 0 0;
+    color:var(--muted);
+    font:11px/1.2 var(--mono);
+  }
+  .link-button{
+    height:36px;
+    padding:0 10px;
+    display:inline-grid;
+    place-items:center;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:color-mix(in srgb, var(--panel) 86%, transparent);
+    color:var(--ink);
+    font:800 12px/1 var(--mono);
+    text-decoration:none;
+    cursor:pointer;
+  }
+  .link-button.primary{
+    width:100%;
+    border-color:var(--ink);
+    background:var(--ink);
+    color:var(--paper);
+  }
+  .link-button.is-active{
+    border-color:color-mix(in srgb, var(--cache) 46%, var(--rule));
+    color:var(--cache);
+    background:color-mix(in srgb, var(--cache) 8%, var(--panel));
+  }
+  .sidebar-nav{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:8px;
+  }
+  .legend{
+    display:grid;
+    align-content:start;
+    gap:10px;
+    padding-top:8px;
+    border-top:1px solid var(--rule);
+  }
+  .legend h2{
+    margin:0 0 2px;
+    color:var(--muted);
+    font:900 11px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .legend-row{
+    min-height:34px;
+    display:grid;
+    grid-template-columns:10px minmax(0,1fr);
+    align-items:center;
+    gap:8px;
+    padding:0 8px;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:color-mix(in srgb, var(--panel) 72%, transparent);
+    color:var(--muted);
+    font:12px/1.3 var(--mono);
+  }
+  .dot{
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    background:var(--accent);
+  }
+  .page{
+    min-width:0;
+    display:grid;
+    grid-template-rows:auto minmax(0,1fr);
+    gap:12px;
+  }
+  .hero{
+    display:grid;
+    grid-template-columns:minmax(0,1.5fr) minmax(360px,.7fr);
+    gap:12px;
+  }
+  .hero-card,
+  .proof-card,
+  .stage,
+  .detail-panel,
+  .flow-panel,
+  .scenario-panel{
+    border:1px solid var(--rule);
+    border-radius:12px;
+    background:color-mix(in srgb, var(--panel) 94%, transparent);
+    box-shadow:var(--shadow);
+  }
+  .hero-card{
+    min-height:150px;
+    display:grid;
+    align-content:space-between;
+    gap:16px;
+    padding:20px;
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--cache) 10%, transparent), transparent 42%),
+      color-mix(in srgb, var(--panel) 94%, transparent);
+  }
+  .hero-copy{
+    display:grid;
+    gap:12px;
+  }
+  .eyebrow{
+    color:var(--cache);
+    font:900 11px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .hero-card h2{
+    max-width:760px;
+    margin:0;
+    font-size:clamp(28px,3.4vw,46px);
+    line-height:1;
+    letter-spacing:0;
+  }
+  .hero-card p{
+    max-width:720px;
+    margin:0;
+    color:var(--muted);
+    font-size:15px;
+  }
+  .hero-strip{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .hero-chip{
+    min-height:28px;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    border:1px solid var(--rule);
+    border-radius:999px;
+    background:var(--panel);
+    padding:0 10px;
+    color:var(--muted);
+    font:900 11px/1 var(--mono);
+  }
+  .hero-chip::before{
+    content:"";
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:var(--accent,var(--cache));
+  }
+  .proof-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+  .proof-card{
+    min-height:70px;
+    display:grid;
+    align-content:center;
+    gap:7px;
+    padding:12px;
+    box-shadow:none;
+  }
+  .proof-card span{
+    color:var(--muted);
+    font:900 10px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .proof-card b{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font:900 clamp(18px,2.2vw,28px)/1 var(--mono);
+  }
+  .proof-card small{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:var(--muted);
+    font:800 10px/1 var(--mono);
+  }
+  .proof-card.save b{color:var(--cache)}
+  .architecture-shell{
+    min-height:0;
+    display:grid;
+    grid-template-columns:minmax(740px,1fr) 320px;
+    gap:12px;
+  }
+  .canvas{
+    min-width:0;
+    display:grid;
+    gap:12px;
+  }
+  .flow-panel{
+    position:relative;
+    overflow:hidden;
+    padding:16px;
+  }
+  .flow-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
+  }
+  .flow-head h2{
+    margin:0;
+    font:900 14px/1 var(--mono);
+  }
+  .flow-head span{
+    color:var(--muted);
+    font:800 11px/1 var(--mono);
+  }
+  .flow-map{
+    position:relative;
+    min-height:520px;
+    border:1px solid var(--rule);
+    border-radius:10px;
+    background:
+      radial-gradient(circle at 24% 18%, color-mix(in srgb, var(--cache) 9%, transparent), transparent 24%),
+      radial-gradient(circle at 82% 68%, color-mix(in srgb, var(--qwen) 8%, transparent), transparent 24%),
+      var(--panel);
+    overflow:hidden;
+  }
+  .links{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+  }
+  .links path{
+    fill:none;
+    stroke:color-mix(in srgb, var(--rule) 82%, var(--ink));
+    stroke-width:1.35;
+    stroke-dasharray:6 8;
+    vector-effect:non-scaling-stroke;
+  }
+  .links path.hot{
+    stroke:var(--cache);
+    stroke-width:2.1;
+    stroke-dasharray:0;
+    filter:drop-shadow(0 0 2px color-mix(in srgb, var(--cache) 38%, transparent));
+  }
+  .packet{
+    position:absolute;
+    left:var(--x);
+    top:var(--y);
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    background:var(--cache);
+    box-shadow:0 0 0 6px color-mix(in srgb, var(--cache) 18%, transparent);
+    opacity:0;
+    transform:translate(-50%,-50%);
+  }
+  .packet.run{
+    opacity:1;
+  }
+  .node{
+    position:absolute;
+    left:var(--x);
+    top:var(--y);
+    width:138px;
+    min-height:56px;
+    display:grid;
+    grid-template-columns:28px minmax(0,1fr);
+    align-items:center;
+    gap:7px;
+    padding:7px;
+    border:1px solid var(--rule);
+    border-radius:10px;
+    background:color-mix(in srgb, var(--panel) 94%, transparent);
+    color:var(--ink);
+    text-align:left;
+    box-shadow:0 8px 24px rgba(0,0,0,.07);
+    transform:translate(-50%,-50%);
+    cursor:pointer;
+  }
+  .node:hover,
+  .node.is-active{
+    border-color:color-mix(in srgb, var(--accent) 66%, var(--rule));
+    background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, var(--panel)), var(--panel));
+  }
+  .node.is-lit{
+    box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent), 0 12px 30px rgba(0,0,0,.1);
+  }
+  .node-logo{
+    width:28px;
+    height:28px;
+    display:grid;
+    place-items:center;
+    border-radius:8px;
+    color:white;
+    background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 62%,black));
+    font:900 10px/1 var(--mono);
+  }
+  .node-logo img{
+    width:72%;
+    height:72%;
+    object-fit:contain;
+  }
+  .node-copy{
+    min-width:0;
+  }
+  .node-copy b,
+  .node-copy span{
+    display:block;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .node-copy b{font-size:11px}
+  .node-copy span{margin-top:3px;color:var(--muted);font:800 8px/1.2 var(--mono)}
+  .stage-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+  }
+  .stage{
+    min-height:110px;
+    display:grid;
+    grid-template-rows:auto auto 1fr;
+    gap:8px;
+    padding:12px;
+    box-shadow:none;
+  }
+  .stage span{
+    color:var(--muted);
+    font:900 10px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .stage b{
+    font-size:14px;
+  }
+  .stage p{
+    margin:0;
+    color:var(--muted);
+    font-size:12px;
+  }
+  .side{
+    min-width:0;
+    display:grid;
+    grid-template-rows:auto auto minmax(0,1fr);
+    gap:12px;
+  }
+  .detail-panel,
+  .scenario-panel{
+    padding:12px;
+    box-shadow:none;
+  }
+  .panel-title{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .panel-title b{
+    font:900 13px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .panel-title span{
+    color:var(--muted);
+    font:800 10px/1 var(--mono);
+  }
+  .detail-panel h3{
+    margin:0 0 7px;
+    font-size:17px;
+  }
+  .detail-panel p{
+    margin:0 0 12px;
+    color:var(--muted);
+    font-size:13px;
+  }
+  .kv{
+    display:grid;
+    gap:1px;
+    overflow:hidden;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:var(--rule);
+  }
+  .kv-row{
+    display:grid;
+    grid-template-columns:98px minmax(0,1fr);
+    gap:8px;
+    background:var(--panel);
+    padding:8px;
+  }
+  .kv-row span{
+    color:var(--muted);
+    font:900 10px/1.1 var(--mono);
+    text-transform:uppercase;
+  }
+  .kv-row b{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font:800 12px/1.2 var(--mono);
+  }
+  .scenario-buttons{
+    display:grid;
+    gap:8px;
+  }
+  .scenario{
+    min-height:46px;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    gap:10px;
+    border:1px solid var(--rule);
+    border-radius:8px;
+    background:var(--panel);
+    color:var(--ink);
+    padding:0 10px;
+    text-align:left;
+    font:800 12px/1.1 var(--mono);
+    cursor:pointer;
+  }
+  .scenario:hover,
+  .scenario.is-active{
+    border-color:color-mix(in srgb, var(--cache) 50%, var(--rule));
+    background:color-mix(in srgb, var(--cache) 7%, var(--panel));
+  }
+  .scenario span{
+    color:var(--muted);
+    font-size:10px;
+    text-align:right;
+  }
+  .timeline{
+    min-height:0;
+    overflow:auto;
+    border:1px solid var(--rule);
+    border-radius:12px;
+    background:var(--panel);
+    padding:12px;
+  }
+  .timeline h3{
+    margin:0 0 10px;
+    font:900 13px/1 var(--mono);
+    text-transform:uppercase;
+  }
+  .step{
+    display:grid;
+    grid-template-columns:22px minmax(0,1fr);
+    gap:8px;
+    padding:0 0 10px;
+  }
+  .step:last-child{padding-bottom:0}
+  .step-dot{
+    position:relative;
+    width:22px;
+    display:grid;
+    justify-items:center;
+  }
+  .step-dot::before{
+    content:"";
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    background:var(--accent);
+    margin-top:4px;
+  }
+  .step:not(:last-child) .step-dot::after{
+    content:"";
+    position:absolute;
+    top:17px;
+    bottom:-2px;
+    border-left:1px solid var(--rule);
+  }
+  .step-copy b{
+    display:block;
+    font:900 12px/1.2 var(--mono);
+  }
+  .step-copy span{
+    display:block;
+    margin-top:3px;
+    color:var(--muted);
+    font-size:12px;
+  }
+  @media (max-width:1040px){
+    .shell{grid-template-columns:1fr}
+    .sidebar{
+      grid-template-rows:auto;
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .sidebar-nav{grid-template-columns:repeat(3,minmax(0,1fr));flex:1 1 360px}
+    .legend{display:none}
+    .architecture-shell{grid-template-columns:1fr}
+    .side{grid-template-columns:1fr 1fr;grid-template-rows:auto}
+    .timeline{grid-column:1/-1;max-height:260px}
+  }
+  @media (min-width:1041px) and (max-width:1450px){
+    .node{width:128px}
+    .node-logo{
+      width:28px;
+      height:28px;
+    }
+    .node-copy b{font-size:10px}
+    .node-copy span{font-size:8px}
+  }
+  @media (max-width:720px){
+    body{padding:12px}
+    .hero{grid-template-columns:1fr}
+    .proof-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .hero-card{min-height:auto}
+    .flow-map{min-height:720px}
+    .node{width:154px}
+    .node[data-id="client"],
+    .node[data-id="gateway"],
+    .node[data-id="security"]{
+      width:min(30vw,128px);
+      min-height:58px;
+      grid-template-columns:24px minmax(0,1fr);
+      gap:5px;
+      padding:6px;
+    }
+    .node[data-id="client"]{--x:17%!important;--y:8%!important}
+    .node[data-id="gateway"]{--x:50%!important;--y:8%!important}
+    .node[data-id="security"]{--x:83%!important;--y:8%!important}
+    .node[data-id="client"] .node-logo,
+    .node[data-id="gateway"] .node-logo,
+    .node[data-id="security"] .node-logo{
+      width:24px;
+      height:24px;
+      border-radius:7px;
+      font-size:8px;
+    }
+    .node[data-id="client"] .node-copy b,
+    .node[data-id="gateway"] .node-copy b,
+    .node[data-id="security"] .node-copy b{font-size:9px}
+    .node[data-id="client"] .node-copy span,
+    .node[data-id="gateway"] .node-copy span,
+    .node[data-id="security"] .node-copy span{font-size:7px}
+    .node[data-id="cache"]{--x:50%!important;--y:23%!important}
+    .node[data-id="triage"]{--x:50%!important;--y:36%!important}
+    .node[data-id="mcp"]{--x:24%!important;--y:50%!important}
+    .node[data-id="policy"]{--x:76%!important;--y:50%!important}
+    .node[data-id="models"]{--x:50%!important;--y:62%!important}
+    .node[data-id="openrouter"]{--x:50%!important;--y:75%!important}
+    .node[data-id="verifier"]{--x:50%!important;--y:88%!important}
+    .node[data-id="dashboard"]{--x:50%!important;--y:98%!important}
+    .links{display:none}
+    .stage-grid{grid-template-columns:1fr}
+    .side{grid-template-columns:1fr}
+    .timeline{grid-column:auto}
+  }
+  @media (max-width:560px){
+    .sidebar-nav{grid-template-columns:1fr}
+    .hero-card h2{font-size:32px}
+    .proof-grid{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <img class="brand-mark" src="../imgs/logos/app_logo.png" alt="TokenTriage">
+      <div>
+        <h1>TokenTriage</h1>
+        <p>interactive system map</p>
+      </div>
+    </div>
+
+    <a class="link-button primary" href="/chat">New chat</a>
+
+    <nav class="sidebar-nav" aria-label="Primary navigation">
+      <a class="link-button" href="/chat">Chat</a>
+      <a class="link-button" href="/dashboard">Dashboard</a>
+      <a class="link-button is-active" href="/architecture">Architecture</a>
+    </nav>
+
+    <div class="legend">
+      <h2>System Lens</h2>
+      <div class="legend-row"><i class="dot" style="--accent:var(--cache)"></i><span>Cost-saving path</span></div>
+      <div class="legend-row"><i class="dot" style="--accent:var(--qwen)"></i><span>Routing intelligence</span></div>
+      <div class="legend-row"><i class="dot" style="--accent:var(--verify)"></i><span>Quality guardrail</span></div>
+      <div class="legend-row"><i class="dot" style="--accent:var(--pro)"></i><span>Policy/security stop</span></div>
+    </div>
+  </aside>
+
+  <main class="page">
+    <section class="hero">
+      <div class="hero-card">
+        <div class="hero-copy">
+          <div class="eyebrow">Agent FinOps Control Plane</div>
+          <h2>Local-first routing, cloud rescue only when quality needs it.</h2>
+          <p>TokenTriage wraps every agent request with security, semantic cache, triage, MCP-backed policy, local model dispatch, verifier sampling, OpenRouter rescue, and a decision receipt.</p>
+        </div>
+        <div class="hero-strip" aria-label="Architecture highlights">
+          <span class="hero-chip" style="--accent:var(--cache)">T0 cache first</span>
+          <span class="hero-chip" style="--accent:var(--qwen)">Qwen local tiers</span>
+          <span class="hero-chip" style="--accent:var(--verify)">Verifier gate</span>
+          <span class="hero-chip" style="--accent:var(--pro)">Policy firewall</span>
+        </div>
+      </div>
+      <div class="proof-grid">
+        <div class="proof-card save"><span>Killer Metric</span><b>97.7%</b><small>lower inference cost</small></div>
+        <div class="proof-card"><span>Primary Runtime</span><b>Ollama</b><small>no-key local demo</small></div>
+        <div class="proof-card"><span>Cloud Rescue</span><b>OpenRouter</b><small>T4-T7 on failure or policy</small></div>
+        <div class="proof-card"><span>API Surface</span><b>OpenAI</b><small>Gemini-compatible ingress retained</small></div>
+        <div class="proof-card"><span>Evidence</span><b>Reports</b><small>CSV, metrics, dashboard</small></div>
+        <div class="proof-card"><span>Ledger</span><b>Dashboard</b><small>same decision log</small></div>
+      </div>
+    </section>
+
+    <section class="architecture-shell">
+      <div class="canvas">
+        <section class="flow-panel">
+          <div class="flow-head">
+            <h2>Runtime Architecture</h2>
+            <span id="flowStatus">select a scenario</span>
+          </div>
+          <div class="flow-map" id="flowMap">
+            <svg class="links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <path data-link="client-gateway" d="M25 12 H36"></path>
+              <path data-link="gateway-security" d="M48 12 H59"></path>
+              <path data-link="security-cache" d="M71 17 V30 H34 V36"></path>
+              <path data-link="cache-triage" d="M42 38 H58"></path>
+              <path data-link="triage-mcp" d="M66 44 V54 H28 V60"></path>
+              <path data-link="mcp-policy" d="M28 66 H66 V60"></path>
+              <path data-link="policy-models" d="M66 66 H38 V74"></path>
+              <path data-link="models-openrouter" d="M46 80 H58"></path>
+              <path data-link="models-verifier" d="M38 82 V89"></path>
+              <path data-link="openrouter-verifier" d="M66 82 V89 H46"></path>
+              <path data-link="models-dashboard" d="M38 80 H89 V88"></path>
+              <path data-link="openrouter-dashboard" d="M66 80 H89 V88"></path>
+              <path data-link="verifier-dashboard" d="M38 93 H89"></path>
+              <path data-link="cache-dashboard" d="M34 44 V96 H89 V92"></path>
+            </svg>
+            <div class="packet" id="packet" style="--x:12%;--y:10%"></div>
+            <button class="node" data-id="client" style="--x:17%;--y:12%;--accent:var(--qwen)">
+              <div class="node-logo">API</div><div class="node-copy"><b>Client apps</b><span>OpenAI/Gemini-compatible</span></div>
+            </button>
+            <button class="node" data-id="gateway" style="--x:42%;--y:12%;--accent:var(--qwen)">
+              <div class="node-logo"><img src="../imgs/logos/app_logo.png" alt=""></div><div class="node-copy"><b>FastAPI gateway</b><span>/v1 + /v1beta</span></div>
+            </button>
+            <button class="node" data-id="security" style="--x:67%;--y:12%;--accent:var(--pro)">
+              <div class="node-logo">SG</div><div class="node-copy"><b>Security gateway</b><span>sanitize + quarantine</span></div>
+            </button>
+            <button class="node" data-id="cache" style="--x:34%;--y:39%;--accent:var(--cache)">
+              <div class="node-logo"><img src="../imgs/logos/nomic.png" alt=""></div><div class="node-copy"><b>Cache T0</b><span>$0 hit path</span></div>
+            </button>
+            <button class="node" data-id="triage" style="--x:66%;--y:39%;--accent:var(--qwen)">
+              <div class="node-logo"><img src="../imgs/logos/qwen.png" alt=""></div><div class="node-copy"><b>Triage</b><span>type + complexity</span></div>
+            </button>
+            <button class="node" data-id="mcp" style="--x:28%;--y:63%;--accent:var(--qwen)">
+              <div class="node-logo">MCP</div><div class="node-copy"><b>Pricing MCP</b><span>prices + budget</span></div>
+            </button>
+            <button class="node" data-id="policy" style="--x:66%;--y:63%;--accent:var(--verify)">
+              <div class="node-logo">YAML</div><div class="node-copy"><b>Policy</b><span>floors + caps</span></div>
+            </button>
+            <button class="node" data-id="models" style="--x:38%;--y:78%;--accent:var(--cache)">
+              <div class="node-logo"><img src="../imgs/logos/qwen.png" alt=""></div><div class="node-copy"><b>Local Models</b><span>Qwen T1-T3</span></div>
+            </button>
+            <button class="node" data-id="openrouter" style="--x:66%;--y:78%;--accent:var(--verify)">
+              <div class="node-logo"><img src="../imgs/logos/openrouter-icon.webp" alt=""></div><div class="node-copy"><b>OpenRouter</b><span>rescue catalog</span></div>
+            </button>
+            <button class="node" data-id="verifier" style="--x:38%;--y:92%;--accent:var(--verify)">
+              <div class="node-logo">V</div><div class="node-copy"><b>Verifier</b><span>sample + escalate</span></div>
+            </button>
+            <button class="node" data-id="dashboard" style="--x:89%;--y:92%;--accent:var(--cache)">
+              <div class="node-logo">UI</div><div class="node-copy"><b>Dashboard</b><span>receipt + savings</span></div>
+            </button>
+          </div>
+        </section>
+
+        <section class="stage-grid" aria-label="Winning proof points">
+          <div class="stage"><span>Traceability</span><b>Every call is explainable</b><p>Security, cache, triage, policy, dispatch, verifier, and receipt are visible in the UI.</p></div>
+          <div class="stage"><span>Privacy posture</span><b>Local by default</b><p>Normal work stays on Ollama tiers; OpenRouter appears only for rescue or sensitive policy routes.</p></div>
+          <div class="stage"><span>Cost science</span><b>MCP-backed thresholds</b><p>Routing uses task-type accuracy floors, prices, latency, and budget state.</p></div>
+          <div class="stage"><span>Evidence loop</span><b>Dashboard + reports</b><p>The same SQLite decisions drive analytics, CSV export, and judge-ready evidence.</p></div>
+        </section>
+      </div>
+
+      <aside class="side">
+        <section class="detail-panel" id="detailPanel">
+          <div class="panel-title"><b>Inspector</b><span>click a node</span></div>
+          <h3>FastAPI Gateway</h3>
+          <p>OpenAI and Gemini-compatible entrypoint. It streams routing events to the chat UI and returns a TokenTriage receipt with every response.</p>
+          <div class="kv">
+            <div class="kv-row"><span>Interface</span><b>/v1 + /v1beta</b></div>
+            <div class="kv-row"><span>Why it wins</span><b>drop-in adoption</b></div>
+            <div class="kv-row"><span>Proof</span><b>live trace + metadata</b></div>
+          </div>
+        </section>
+
+        <section class="scenario-panel">
+          <div class="panel-title"><b>Scenario Simulator</b><span>lights the path</span></div>
+          <div class="scenario-buttons" id="scenarios"></div>
+        </section>
+
+        <section class="timeline">
+          <h3 id="timelineTitle">Cheap Route</h3>
+          <div id="timeline"></div>
+        </section>
+      </aside>
+    </section>
+  </main>
+</div>
+
+<script>
+const COMPONENTS = {
+  client: {
+    title:'Client Apps',
+    text:'Any agent, copilot, or workflow can use TokenTriage through OpenAI-compatible chat completions or Gemini generateContent.',
+    rows:[['Interface','/v1/chat/completions'],['Gemini','/v1beta/models/{model}:generateContent'],['Why it wins','no client rewrite']]
+  },
+  gateway: {
+    title:'FastAPI Gateway',
+    text:'The gateway normalizes requests, streams routing events, and returns answer plus receipt metadata.',
+    rows:[['Runtime','tokentriage serve'],['Streams','/v1/route/stream'],['Proof','live UI + API metadata']]
+  },
+  security: {
+    title:'Security Gateway',
+    text:'Input is sanitized, prompt-injection patterns are quarantined, rate limits are applied, and budget policy is checked before spend.',
+    rows:[['Controls','sanitize + quarantine'],['Command','tokentriage attack-test'],['Failure mode','blocked before model call']]
+  },
+  cache: {
+    title:'Semantic Cache',
+    text:'Nomic embeddings provide T0 reuse. A cache hit returns immediately with zero model cost.',
+    rows:[['Tier','T0'],['Cost','$0 model call'],['Metric','cache hit savings']]
+  },
+  triage: {
+    title:'Triage Agent',
+    text:'A lightweight ADK-backed agent classifies task type and complexity so policy can route to the cheapest sufficient tier.',
+    rows:[['Output','task type + complexity'],['Model','Qwen local tier'],['Why it wins','structured routing signal']]
+  },
+  mcp: {
+    title:'Pricing MCP',
+    text:'Benchmarks, model prices, budget state, and decision logs live behind MCP tools instead of being hardcoded in the agent.',
+    rows:[['Tools','pricing + stats'],['Storage','SQLite decision log'],['Proof','/api/stats dashboard']]
+  },
+  policy: {
+    title:'Policy Engine',
+    text:'YAML policy enforces accuracy floors, min-tier overrides for sensitive task types, latency SLOs, and daily spend caps.',
+    rows:[['File','config/policy.yaml'],['Guardrail','min_tier + budget cap'],['Why it wins','auditable control plane']]
+  },
+  models: {
+    title:'Model Pool',
+    text:'Local Ollama tiers are the no-key demo path. They answer first when sufficient, keeping normal tasks cheap and private.',
+    rows:[['T1/T2/T3','Qwen via Ollama'],['Role','cheap local first pass'],['Fallback','OpenRouter if quality fails']]
+  },
+  openrouter: {
+    title:'OpenRouter Rescue',
+    text:'When the verifier rejects a local answer, TokenTriage escalates to the best matching OpenRouter free model: Gemma for general work, gpt-oss for fast responses, Qwen Next for reasoning, and Qwen Coder for code.',
+    rows:[['T4','Gemma 31B general'],['T5/T6/T7','gpt-oss / Qwen Next / Qwen Coder'],['Why it wins','quality rescue without always paying cloud']]
+  },
+  verifier: {
+    title:'Verifier Agent',
+    text:'Sampled answers are judged by a verifier. Thin or failed answers escalate one tier, bounding quality risk and spend.',
+    rows:[['Mode','sampled verification'],['Action','pass/fail/escalate'],['Learning','tokentriage tune']]
+  },
+  dashboard: {
+    title:'Dashboard',
+    text:'The dashboard proves spend, baseline, savings, cache hits, escalations, and recent decisions from the same log the API writes.',
+    rows:[['Route','/dashboard'],['Evidence','reports/latest/dashboard.html'],['Why it wins','judge-visible proof']]
+  }
+};
+
+const SCENARIOS = [
+  {
+    id:'cheap',
+    title:'Cheap Route',
+    meta:'T1 saves 99%+',
+    status:'T1 selected after policy check',
+    nodes:['client','gateway','security','cache','triage','mcp','policy','models','dashboard'],
+    links:['client-gateway','gateway-security','security-cache','cache-triage','triage-mcp','mcp-policy','policy-models','models-dashboard'],
+    steps:[
+      ['Security Gateway','input checked and sanitized','var(--pro)'],
+      ['Semantic Cache','miss, continue routing','var(--cache)'],
+      ['Triage Agent','simple factual lookup','var(--qwen)'],
+      ['Pricing MCP','returns prices, benchmarks, and budget','var(--qwen)'],
+      ['Policy Engine','T1 meets accuracy floor','var(--verify)'],
+      ['Model Dispatch','Qwen 3B answers locally','var(--cache)'],
+      ['Savings Receipt','cost compared to Gemini frontier baseline','var(--cache)']
+    ]
+  },
+  {
+    id:'rescue',
+    title:'Quality Rescue',
+    meta:'local fail -> OpenRouter',
+    status:'verifier escalates to T4 rescue',
+    nodes:['client','gateway','security','cache','triage','mcp','policy','models','verifier','openrouter','dashboard'],
+    links:['client-gateway','gateway-security','security-cache','cache-triage','triage-mcp','mcp-policy','policy-models','models-verifier','models-openrouter','openrouter-verifier','openrouter-dashboard'],
+    steps:[
+      ['Local Models','Qwen answers first to avoid cloud by default','var(--cache)'],
+      ['Verifier Agent','flags thin or incomplete local answer','var(--verify)'],
+      ['OpenRouter Rescue','matched free model re-answers through T4-T7','var(--verify)'],
+      ['Privacy Firewall','cloud context policy limits prior turns','var(--pro)'],
+      ['Savings Receipt','records local attempt, rescue tier, and final cost','var(--cache)']
+    ]
+  },
+  {
+    id:'cache',
+    title:'Cache Hit',
+    meta:'T0 returns free',
+    status:'semantic cache hit',
+    nodes:['client','gateway','security','cache','dashboard'],
+    links:['client-gateway','gateway-security','security-cache','cache-dashboard'],
+    steps:[
+      ['Security Gateway','request is safe','var(--pro)'],
+      ['Semantic Cache','Nomic embedding match found','var(--cache)'],
+      ['Model Dispatch','skipped entirely','var(--cache)'],
+      ['Savings Receipt','$0 model cost','var(--cache)']
+    ]
+  },
+  {
+    id:'sensitive',
+    title:'Sensitive Escalation',
+    meta:'policy protects quality',
+    status:'minimum tier and verifier engaged',
+    nodes:['client','gateway','security','cache','triage','mcp','policy','models','verifier','openrouter','dashboard'],
+    links:['client-gateway','gateway-security','security-cache','cache-triage','triage-mcp','mcp-policy','policy-models','models-verifier','models-openrouter','openrouter-verifier','openrouter-dashboard'],
+    steps:[
+      ['Triage Agent','legal or financial task detected','var(--qwen)'],
+      ['Pricing MCP','checks benchmarks and budget','var(--qwen)'],
+      ['Policy Engine','min_tier override applies','var(--verify)'],
+      ['Model Pool','starts on strongest local tier','var(--pro)'],
+      ['Verifier Agent','samples answer for quality','var(--verify)'],
+      ['OpenRouter Rescue','available if local quality fails','var(--verify)'],
+      ['Dashboard','records escalation and cost delta','var(--cache)']
+    ]
+  },
+  {
+    id:'block',
+    title:'Security Block',
+    meta:'no model call',
+    status:'quarantined before spend',
+    nodes:['client','gateway','security','dashboard'],
+    links:['client-gateway','gateway-security'],
+    steps:[
+      ['Security Gateway','prompt-injection pattern detected','var(--pro)'],
+      ['Quarantine','request blocked before model dispatch','var(--pro)'],
+      ['Decision Log','attack test proves the guardrail','var(--cache)']
+    ]
+  }
+];
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
+  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+}[c]));
+const detailPanel = document.getElementById('detailPanel');
+const timeline = document.getElementById('timeline');
+const timelineTitle = document.getElementById('timelineTitle');
+const flowStatus = document.getElementById('flowStatus');
+const packet = document.getElementById('packet');
+const scenarioBox = document.getElementById('scenarios');
+let packetFrame = null;
+
+function renderDetail(id){
+  const c = COMPONENTS[id] || COMPONENTS.gateway;
+  detailPanel.innerHTML = `
+    <div class="panel-title"><b>Inspector</b><span>${esc(id)}</span></div>
+    <h3>${esc(c.title)}</h3>
+    <p>${esc(c.text)}</p>
+    <div class="kv">${c.rows.map(([k,v]) => `
+      <div class="kv-row"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}
+    </div>`;
+  document.querySelectorAll('.node').forEach(n => n.classList.toggle('is-active', n.dataset.id === id));
+}
+
+function renderScenarioButtons(){
+  scenarioBox.innerHTML = SCENARIOS.map(s => `
+    <button class="scenario" type="button" data-id="${esc(s.id)}">
+      <b>${esc(s.title)}</b><span>${esc(s.meta)}</span>
+    </button>`).join('');
+  scenarioBox.querySelectorAll('.scenario').forEach(btn => {
+    btn.addEventListener('click', () => runScenario(btn.dataset.id));
+  });
+}
+
+function animatePacket(linkIds){
+  if(packetFrame) cancelAnimationFrame(packetFrame);
+  const paths = linkIds
+    .map(id => document.querySelector(`.links path[data-link="${id}"]`))
+    .filter(Boolean)
+    .map(path => ({path, length: path.getTotalLength()}))
+    .filter(item => item.length > 0);
+
+  if(!paths.length){
+    packet.classList.remove('run');
+    return;
+  }
+
+  const totalLength = paths.reduce((sum, item) => sum + item.length, 0);
+  const cycleMs = Math.max(2400, totalLength * 42);
+  const start = performance.now();
+  packet.classList.add('run');
+
+  const frame = now => {
+    let distance = ((now - start) % cycleMs) / cycleMs * totalLength;
+    let current = paths[paths.length - 1];
+    for(const item of paths){
+      if(distance <= item.length){
+        current = item;
+        break;
+      }
+      distance -= item.length;
+    }
+    const point = current.path.getPointAtLength(Math.max(0, Math.min(distance, current.length)));
+    packet.style.left = `${point.x}%`;
+    packet.style.top = `${point.y}%`;
+    packetFrame = requestAnimationFrame(frame);
+  };
+
+  packetFrame = requestAnimationFrame(frame);
+}
+
+function runScenario(id){
+  const scenario = SCENARIOS.find(s => s.id === id) || SCENARIOS[0];
+  flowStatus.textContent = scenario.status;
+  timelineTitle.textContent = scenario.title;
+  document.querySelectorAll('.scenario').forEach(btn => btn.classList.toggle('is-active', btn.dataset.id === id));
+  document.querySelectorAll('.node').forEach(n => n.classList.toggle('is-lit', scenario.nodes.includes(n.dataset.id)));
+  document.querySelectorAll('.links path').forEach(p => p.classList.toggle('hot', scenario.links.includes(p.dataset.link)));
+  timeline.innerHTML = scenario.steps.map(([name, detail, accent]) => `
+    <div class="step" style="--accent:${accent}">
+      <div class="step-dot"></div>
+      <div class="step-copy"><b>${esc(name)}</b><span>${esc(detail)}</span></div>
+    </div>`).join('');
+  animatePacket(scenario.links);
+}
+
+document.querySelectorAll('.node').forEach(node => {
+  node.addEventListener('click', () => renderDetail(node.dataset.id));
+});
+renderScenarioButtons();
+renderDetail('gateway');
+runScenario('cheap');
+</script>
+</body>
+</html>
