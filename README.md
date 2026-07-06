@@ -14,6 +14,17 @@ used when configured for policy-preferred cloud routes or verifier rescue.
 > **Headline result:** 97.7% lower modeled inference cost versus an
 > always-frontier Gemini baseline on the bundled business workload.
 
+## Hosted Judge Demo
+
+- Demo: https://tokentriage.onrender.com/
+- Chat replay: https://tokentriage.onrender.com/chat
+- Dashboard: https://tokentriage.onrender.com/dashboard
+- Architecture: https://tokentriage.onrender.com/architecture
+
+The hosted version is a deterministic judge replay. It shows the routing trace,
+model-selection transitions, dashboard ledger, and architecture without
+requiring Ollama, OpenRouter, or API keys.
+
 ## Demo Surfaces
 
 Run one server and open the three judge-facing pages:
