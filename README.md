@@ -151,9 +151,14 @@ local tiers and records the routing event.
 
 ```mermaid
 flowchart TD
-    Client["Client apps<br/>OpenAI/Gemini-compatible"]
-    Gateway["FastAPI gateway<br/>/v1 + /v1beta"]
-    Security["Security gateway<br/>sanitize + quarantine"]
+    subgraph Ingress[" "]
+      direction LR
+      Client["Client apps<br/>OpenAI/Gemini-compatible"]
+      Gateway["FastAPI gateway<br/>/v1 + /v1beta"]
+      Security["Security gateway<br/>sanitize + quarantine"]
+      Client --> Gateway --> Security
+    end
+
     Cache["Semantic cache T0<br/>$0 hit path"]
     Triage["Triage agent<br/>task type + complexity"]
     MCP["Pricing MCP<br/>benchmarks + budget"]
@@ -163,7 +168,7 @@ flowchart TD
     OpenRouter["OpenRouter rescue<br/>T4-T7 optional"]
     Dashboard["Dashboard receipt<br/>cost + baseline + savings"]
 
-    Client --> Gateway --> Security --> Cache
+    Security --> Cache
     Cache -- hit --> Dashboard
     Cache -- miss --> Triage
     Triage --> MCP --> Policy
