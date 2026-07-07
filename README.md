@@ -69,6 +69,9 @@ Most AI-agent workflows send every request to an expensive frontier model. That
 is wasteful. Many tasks are simple, repeated, or safely handled by a cheaper
 local model.
 
+**The Flat-Rate Era is Dead**
+In June 2026, GitHub abruptly moved Copilot away from unlimited flat-rate subscriptions to usage-based "AI Credits." The industry is realizing that agent-style workflows and long-running sessions burn too much infrastructure for providers to subsidize. As developers transition to paying per-token for their AI agents, the era of blindly sending every prompt to a frontier model is over. Every token counts.
+
 TokenTriage makes model choice an auditable control plane:
 
 - **T0 semantic cache:** repeated or near-duplicate tasks return with no model call.
