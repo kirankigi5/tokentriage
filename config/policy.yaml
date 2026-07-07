@@ -26,7 +26,7 @@ policies:
 
   cache:
     enabled: true
-    similarity_threshold: 0.95   # cosine sim on embeddings to count as a hit
+    similarity_threshold: 0.90   # cosine sim on embeddings to count as a hit
     ttl_hours: 168               # 1 week
 
   security:
